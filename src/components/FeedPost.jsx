@@ -1,7 +1,10 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { BookmarkIcon, HeartIcon, MessageCircleIcon, SendIcon } from './Icons';
 
 export default function FeedPost({ post }) {
+    const userId = post.user.id || post.user.userId;
+    
     return (
         <div
             className="relative w-full bg-neutral-900 overflow-hidden mb-4 rounded-3xl border-b border-white/5 shadow-xl"
@@ -19,8 +22,8 @@ export default function FeedPost({ post }) {
 
             {/* Header */}
             <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20">
+                <Link to={`/profile/${userId}`} className="flex items-center gap-3 group">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20 group-hover:border-[#d2fb05] transition-all">
                         <img
                             src={
                                 post.user.avatar ||
@@ -30,10 +33,10 @@ export default function FeedPost({ post }) {
                             className="w-full h-full object-cover"
                         />
                     </div>
-                    <span className="font-semibold text-sm drop-shadow-md">
+                    <span className="font-semibold text-sm drop-shadow-md group-hover:text-[#d2fb05] transition-all">
                         {post.user.name}
                     </span>
-                </div>
+                </Link>
 
                 <button>
                     <BookmarkIcon className="w-6 h-6 text-white drop-shadow-md" />

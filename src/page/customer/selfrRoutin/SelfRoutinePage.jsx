@@ -1,33 +1,58 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import BottomNav from "../../../components/BottomNav";
 import TaskCard from "../../../components/TaskCard";
+import taskLogApi from "../../../api/taskLogApi";
 import {
     DumbbellIcon,
     BookOpenIcon,
+    FlameIcon,
+    ClockIcon,
+    PlusIcon
 } from "../../../components/Icons";
 
 export default function SelfRoutinePage() {
-    const tasks = [
-        {
-            id: 1,
-            title: "Gym",
-            progress: 68,
-            description:
-                "Category: Fitness\nTime: 6:30 AM – 7:30 AM\nDuration: 60 minutes\nFrequency: 5 days/week (Mon–Fri)",
-            icon: <DumbbellIcon className="w-6 h-6" />,
-            status: "Processing",
-        },
-        {
-            id: 2,
-            title: "Study",
-            progress: 20,
-            description:
-                "Improve your English with a 1-hour nightly study.\nCategory: Learning\nTime: 8:00 PM – 9:00 PM\nDuration: 60 min",
-            icon: <BookOpenIcon className="w-6 h-6" />,
-            status: "Processing",
-        },
-    ];
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchTodayTasks = async () => {
+        try {
+            setLoading(true);
+            const res = await taskLogApi.getToday();
+            const data = res.data?.data || res.data;
+            
+            // Map API data to UI format
+            const mappedTasks = (data || []).map(log => ({
+                id: log.id,
+                title: log.taskName || log.routineName,
+                progress: log.type === 'Checkbox' 
+                    ? (log.status === 'Done' ? 100 : 0)
+                    : Math.round(((log.loggedValue || 0) / (log.targetValue || 1)) * 100),
+                description: `Type: ${log.type}\nTarget: ${log.targetValue || '-'}\nLogged: ${log.loggedValue || 0}`,
+                icon: getIcon(log.taskName || log.routineName),
+                status: log.status,
+                original: log
+            }));
+
+            setTasks(mappedTasks);
+        } catch (err) {
+            console.error("Failed to fetch today tasks:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTodayTasks();
+    }, []);
+
+    const getIcon = (name) => {
+        const lowerName = (name || "").toLowerCase();
+        if (lowerName.includes("gym") || lowerName.includes("workout")) return <DumbbellIcon />;
+        if (lowerName.includes("read") || lowerName.includes("study") || lowerName.includes("học")) return <BookOpenIcon />;
+        if (lowerName.includes("medit") || lowerName.includes("thiền")) return <FlameIcon />;
+        return <ClockIcon />;
+    };
 
     return (
         <div className="min-h-screen bg-black text-white font-sans pb-24 relative">
@@ -39,28 +64,29 @@ export default function SelfRoutinePage() {
             <main className="px-4 md:max-w-md md:mx-auto">
                 <div className="space-y-4">
                     {/* Task List */}
-                    {tasks.map((task) => (
-                        <TaskCard key={task.id} task={task} />
-                    ))}
+                    {loading ? (
+                         <div className="flex justify-center py-20">
+                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-[#d2fb05]"></div>
+                         </div>
+                    ) : tasks.length > 0 ? (
+                        tasks.map((task) => (
+                            <TaskCard key={task.id} task={task} onUpdate={fetchTodayTasks} />
+                        ))
+                    ) : (
+                        <div className="text-center py-12 bg-[#1a1a1a] rounded-2xl border border-dashed border-white/10">
+                            <p className="text-zinc-500">No tasks for today. Time to relax or add a new one!</p>
+                        </div>
+                    )}
 
                     {/* Add Button */}
                     <Link
-                        to="/customer/selfroutin/workout"
-                        className="w-full h-32 bg-[#1a1a1a] rounded-2xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#2a2a2a] transition-all"
+                        to="/customer/selfroutin/create"
+                        className="w-full h-32 bg-[#1a1a1a] rounded-2xl flex flex-col items-center justify-center text-zinc-600 hover:text-lime-400 hover:bg-[#1a1a1a] border border-dashed border-white/5 hover:border-lime-400/50 transition-all group active:scale-95"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="w-16 h-16"
-                        >
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
+                        <div className="w-12 h-12 rounded-full bg-zinc-900 group-hover:bg-lime-400/10 flex items-center justify-center mb-2 transition-all">
+                            <PlusIcon className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#444] group-hover:text-lime-400">Add New Plan</span>
                     </Link>
                 </div>
             </main>

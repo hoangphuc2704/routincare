@@ -69,7 +69,7 @@ function LoginEmail() {
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-10">
         <div className="w-full max-w-sm space-y-8 rounded-2xl bg-white/5 border border-white/10 p-8 shadow-2xl backdrop-blur-md">
           <div className="space-y-2 text-center">
-            <h1 className="text-5xl font-bold tracking-tight">
+            <h1 className="text-5xl font-bold tracking-tight text-white">
               Rout<span className="text-lime-400">in</span>
             </h1>
             <p className="text-sm text-zinc-300">
