@@ -1,0 +1,522 @@
+# Routin. — RESTful API Specification
+
+## Conventions
+
+- **Base URL:** `https://api.routin.app/v1`
+- **Auth:** `Authorization: Bearer <access_token>` (JWT)
+- **Response envelope:**
+
+```json
+// Success
+{ "success": true,  "data": {},    "message": "" }
+// Error
+{ "success": false, "error": { "code": "ERR_CODE", "message": "" } }
+```
+
+- **Roles:** `Admin` | `User` (Premium/Free)
+- `[A]` = Admin only · `[U]` = User (auth) · `[*]` = cả hai · `[-]` = Public
+- **Status:** ✅ DONE · 🔨 IN PROGRESS · ⏳ PENDING
+- **FE Contract Doc:** `docs/FE_API_REQUEST_RESPONSE.md`
+
+---
+
+## Tình trạng tổng quan hệ thống
+
+| Module                                       | Status     | Controllers/Services                   |
+| -------------------------------------------- | ---------- | -------------------------------------- |
+| Auth (đăng ký, đăng nhập, OTP, Google OAuth) | ✅ DONE    | `AuthController`, `AuthService`        |
+| Routine CRUD + Task CRUD                     | ✅ DONE    | `RoutinesController`, `RoutineService` |
+| Task Tracking (check-in, log)                | ✅ DONE    | `TaskLogsController`, `TaskLogService` |
+| Categories                                   | ✅ DONE    | `CategoriesController`                 |
+| User Profile                                 | ✅ Partial | `UsersController`                      |
+| Subscription & Payment                       | 🔨 IN PROGRESS | `SubscriptionPlansController`, `SubscriptionsController`, `PaymentService` |
+| Social (Follow/Like/Comment)                 | 🔨 IN PROGRESS | DB foundation ready (`Follows`, `UserBlocks`, `FriendRequests`, `Friendships`) |
+| Friendship & Chat                            | 🔨 IN PROGRESS | `FriendsController`, `ChatsController` (Direct chat scope) |
+| Chat Realtime (SignalR)                      | ✅ DONE    | `ChatHub`, `SignalRChatRealtimeNotifier` |
+| Feed / Explore / Reels                       | ⏳ PENDING | —                                      |
+| Creator (quản lý nội dung public)            | ⏳ PENDING | —                                      |
+| Admin Management                             | 🔨 IN PROGRESS | `AdminUsersController`                 |
+| Analytics Dashboard (user/admin)             | 🔨 IN PROGRESS | `AnalyticsController`, `AnalyticsService` |
+| Media Upload (Cloudinary)                    | ✅ DONE    | `MediaController`, `CloudinaryService` |
+
+---
+
+## 1. AUTH ✅ DONE
+
+| Method | Endpoint (Current)           | Access | Mô tả                                        |
+| ------ | ---------------------------- | ------ | -------------------------------------------- |
+| POST   | `/auth/register`             | [-]    | Đăng ký tài khoản                            |
+| POST   | `/auth/login`                | [-]    | Đăng nhập → `access_token` + `refresh_token` |
+| POST   | `/auth/register/otp/send`    | [-]    | Gửi OTP xác thực email                       |
+| POST   | `/auth/register/otp/resend`  | [-]    | Gửi lại OTP xác thực email                   |
+| POST   | `/auth/register/otp/verify`  | [-]    | Xác thực OTP → tạo tài khoản + trả token     |
+| POST   | `/auth/google`               | [-]    | Đăng nhập bằng Google OAuth                  |
+| POST   | `/auth/refresh-token`        | [-]    | Lấy `access_token` mới (rotate refresh token)|
+| POST   | `/auth/logout`               | [*]    | Đăng xuất, revoke refresh token              |
+
+> [!NOTE]
+> Alias `/auth/register/otp/resend` đã hỗ trợ cho luồng gửi lại OTP. Các alias cũ `/auth/send-otp`, `/auth/verify-otp`, `/auth/refresh` chưa được thêm.
+
+### OTP verify error handling (for FE)
+
+- `400 OTP is incorrect.`: cho phép user nhập lại mã hiện tại.
+- `400 OTP has expired. Please request a new OTP.`: hiển thị nút resend và gọi `/auth/register/otp/resend`.
+- `400 OTP has already been used. Please request a new OTP.`: yêu cầu resend OTP.
+- `400 OTP not found. Please request a new OTP.`: yêu cầu resend OTP.
+
+---
+
+## 2. USER PROFILE ✅ Partial
+
+| Method | Endpoint             | Access | Mô tả                                                     | Status |
+| ------ | -------------------- | ------ | --------------------------------------------------------- | ------ |
+| GET    | `/users`             | [A]    | Danh sách tất cả users                                    | ✅      |
+| GET    | `/users/:id`         | [A]    | Chi tiết user                                             | ✅      |
+| GET    | `/users/me`          | [*]    | Thông tin user hiện tại                                   | ✅      |
+| PATCH  | `/users/me`          | [*]    | Cập nhật profile (name, bio, avatar)                      | ✅      |
+| PATCH  | `/users/me/password` | [*]    | Đổi mật khẩu                                              | ✅      |
+| GET    | `/users/:id/profile` | [-]    | Xem profile public của user khác (streak, follower count) | ⏳      |
+
+**Admin route aliases đã có:**
+
+- `GET /admin/users`
+- `GET /admin/users/:id`
+- `POST /admin/users`
+
+---
+
+## 3. CATEGORIES ✅ DONE
+
+| Method | Endpoint                | Access | Mô tả                             | Status |
+| ------ | ----------------------- | ------ | --------------------------------- | ------ |
+| GET    | `/categories`           | [-]    | Danh sách category (for dropdown) | ✅      |
+| POST   | `/admin/categories`     | [A]    | Tạo category mới                  | ✅      |
+| PATCH  | `/admin/categories/:id` | [A]    | Cập nhật category                 | ✅      |
+| DELETE | `/admin/categories/:id` | [A]    | Vô hiệu hóa category              | ✅      |
+
+**Compatibility routes vẫn hỗ trợ:**
+
+- `POST /categories`
+- `PUT|PATCH /categories/:id`
+- `DELETE /categories/:id`
+
+---
+
+## 4. ROUTINE MANAGEMENT ✅ DONE
+
+| Method | Endpoint             | Access | Mô tả                       |
+| ------ | -------------------- | ------ | --------------------------- |
+| GET    | `/routines/me`       | [*]    | Danh sách routine của tôi   |
+| GET    | `/routines/today`    | [*]    | Routines hôm nay + progress |
+| GET    | `/routines/:id`      | [*]    | Chi tiết routine + tasks    |
+| POST   | `/routines`          | [*]    | Tạo routine mới             |
+| PUT    | `/routines/:id`      | [*]    | Cập nhật routine            |
+| DELETE | `/routines/:id`      | [*]    | Xóa routine (soft delete)   |
+| POST   | `/routines/:id/copy` | [*]    | Copy routine của người khác |
+
+### 4.1 Task Management ✅ DONE
+
+| Method | Endpoint                             | Access | Mô tả                    |
+| ------ | ------------------------------------ | ------ | ------------------------ |
+| POST   | `/routines/:routineId/tasks`         | [*]    | Thêm task vào routine    |
+| PUT    | `/routines/:routineId/tasks/:taskId` | [*]    | Cập nhật task            |
+| DELETE | `/routines/:routineId/tasks/:taskId` | [*]    | Xóa task (soft delete)   |
+| PUT    | `/routines/:routineId/tasks/reorder` | [*]    | Sắp xếp lại thứ tự tasks |
+
+---
+
+## 5. TASK TRACKING ✅ DONE
+
+| Method | Endpoint              | Access | Mô tả                                        |
+| ------ | --------------------- | ------ | -------------------------------------------- |
+| GET    | `/task-logs/today`    | [*]    | Tất cả logs của hôm nay                      |
+| POST   | `/task-logs/checkin`  | [*]    | Check-in 1 task (toggle complete/incomplete) |
+| POST   | `/task-logs/log`      | [*]    | Nhập giá trị số cho task (uống 1500ml)       |
+| POST   | `/task-logs/:id/skip` | [*]    | Skip 1 task hôm nay                          |
+| PATCH  | `/task-logs/:id/evidence` | [*] | Gắn URL ảnh/video bằng chứng cho task log    |
+| DELETE | `/task-logs/:id`      | [*]    | Undo check-in (chỉ hôm nay)                  |
+
+**Flow: Daily Check-in**
+
+```
+GET /routines/today
+  → trả về routines có lịch hôm nay + progress từ TaskLogs
+
+POST /task-logs/checkin { task_id }
+  → tìm hoặc tạo TaskLog cho (task_id, user_id, today)
+  → toggle Completed ↔ InProgress
+  → trả về { task_id, status, current_value }
+```
+
+---
+
+## 6. SUBSCRIPTION & PAYMENT 🔨 IN PROGRESS
+
+### 6.1 Implemented
+
+| Method | Endpoint                            | Access | Mô tả                                                  | Status |
+| ------ | ----------------------------------- | ------ | ------------------------------------------------------ | ------ |
+| GET    | `/subscription-plans`               | [-]    | Danh sách gói Premium                                  | ✅      |
+| GET    | `/subscription-plans/:id`           | [-]    | Chi tiết 1 gói                                         | ✅      |
+| POST   | `/subscription-plans`               | [A]    | Tạo gói mới                                            | ✅      |
+| PATCH  | `/subscription-plans/:id`           | [A]    | Cập nhật gói                                           | ✅      |
+| DELETE | `/subscription-plans/:id`           | [A]    | Vô hiệu hóa gói                                        | ✅      |
+| POST   | `/subscriptions`                    | [*]    | Tạo checkout subscription (body: `planId`)             | ✅      |
+| POST   | `/subscriptions/checkout/:planId`   | [*]    | Route compatibility cũ cho checkout                    | ✅      |
+| GET    | `/subscriptions/me`                 | [*]    | Subscription hiện tại của user                         | ✅      |
+| POST   | `/subscriptions/:id/cancel`         | [*]    | Hủy subscription                                       | ✅      |
+| GET    | `/subscriptions`                    | [A]    | Tất cả subscriptions (admin)                           | ✅      |
+| POST   | `/subscriptions/webhook/payos`      | [-]    | Webhook PayOS                                          | ✅      |
+| GET    | `/payments/me`                      | [*]    | Lịch sử thanh toán của user                            | ✅      |
+| GET    | `/payments`                         | [A]    | Tất cả lịch sử thanh toán (admin)                      | ✅      |
+
+### 6.2 Pending
+
+| Method | Endpoint                    | Access | Mô tả                                        |
+| ------ | --------------------------- | ------ | -------------------------------------------- |
+| POST   | `/payments/callback/vnpay`  | [-]    | Webhook VNPay                                |
+| POST   | `/payments/callback/momo`   | [-]    | Webhook MoMo                                 |
+| POST   | `/payments/verify`          | [A]    | Admin xác nhận chuyển khoản thủ công         |
+
+**Flow: Đăng ký Premium**
+
+```
+1. GET  /subscription-plans              → user chọn gói
+2. POST /subscriptions { planId }
+          → tạo UserSubscription (Pending)
+          → tạo Transaction (Pending)
+          → trả về { payment_url }
+3. User redirect → PayOS checkout
+4. POST /subscriptions/webhook/payos      → PayOS callback
+          → cập nhật Transaction → Success
+          → cập nhật UserSubscription → Active
+          → mở khóa Premium features (Reels upload, AI suggestions)
+```
+
+**Premium Features unlock:**
+
+- Upload ảnh/video check-in (evidence)
+- AI routine suggestions
+- Detailed analytics & streak history
+- Unlimited public routines
+
+---
+
+## 7. SOCIAL — FOLLOW 🔨 IN PROGRESS
+
+| Method | Endpoint                       | Access | Mô tả                               |
+| ------ | ------------------------------ | ------ | ----------------------------------- |
+| POST   | `/users/:id/follow`            | [*]    | Follow user                         |
+| DELETE | `/users/:id/follow`            | [*]    | Unfollow user                       |
+| GET    | `/users/:id/followers`         | [-]    | Danh sách followers                 |
+| GET    | `/users/:id/following`         | [-]    | Danh sách đang follow               |
+| GET    | `/users/me/following/routines` | [*]    | Routines từ những người đang follow |
+
+> [!NOTE]
+> DB-first foundation đã được thêm cho social/friend/chat:
+> `UserBlocks`, `FriendRequests`, `Friendships`, `Conversations`, `ConversationParticipants`, `Messages`, `MessageAttachments`.
+> API/service cho follow-friend-chat sẽ triển khai ở bước tiếp theo.
+
+### 7.1 Follow & Block — API Plan (Code next)
+
+| Method | Endpoint               | Access | Mô tả                                      | Status |
+| ------ | ---------------------- | ------ | ------------------------------------------ | ------ |
+| POST   | `/users/:id/follow`    | [*]    | Follow user                                 | ✅     |
+| DELETE | `/users/:id/follow`    | [*]    | Unfollow user                               | ✅     |
+| GET    | `/users/:id/followers` | [-]    | Danh sách followers                         | ✅     |
+| GET    | `/users/:id/following` | [-]    | Danh sách following                         | ✅     |
+| POST   | `/users/:id/block`     | [*]    | Block user (auto-unfollow hai chiều)        | ✅     |
+| DELETE | `/users/:id/block`     | [*]    | Unblock user                                | ✅     |
+| GET    | `/users/me/blocks`     | [*]    | Danh sách user đã block                     | ✅     |
+
+**Flow: Follow/Block rules**
+
+```
+POST /users/:id/follow
+  → reject nếu self-follow
+  → reject nếu có block 1 trong 2 chiều
+  → idempotent nếu đã follow
+
+POST /users/:id/block
+  → insert UserBlocks
+  → remove Follow (me->target, target->me) nếu có
+  → (phase chat) remove direct conversation access khi cần
+```
+
+### 7.2 Friendship — API Plan (sau Follow)
+
+| Method | Endpoint                            | Access | Mô tả                                   | Status |
+| ------ | ----------------------------------- | ------ | --------------------------------------- | ------ |
+| POST   | `/friends/requests/:userId`         | [*]    | Gửi lời mời kết bạn                     | ✅     |
+| GET    | `/friends/requests/incoming`        | [*]    | Danh sách lời mời nhận được             | ✅     |
+| GET    | `/friends/requests/outgoing`        | [*]    | Danh sách lời mời đã gửi                | ✅     |
+| POST   | `/friends/requests/:id/accept`      | [*]    | Chấp nhận lời mời                       | ✅     |
+| POST   | `/friends/requests/:id/reject`      | [*]    | Từ chối lời mời                         | ✅     |
+| DELETE | `/friends/requests/:id`             | [*]    | Hủy lời mời (người gửi)                 | ✅     |
+| GET    | `/friends`                          | [*]    | Danh sách bạn bè                        | ✅     |
+| DELETE | `/friends/:userId`                  | [*]    | Hủy kết bạn                             | ✅     |
+
+**Flow: Friend request**
+
+```
+POST /friends/requests/:userId
+  → reject nếu block/self/already-friends
+  → reject nếu đã có request pending cho cùng cặp user
+
+POST /friends/requests/:id/accept
+  → update FriendRequest = Accepted
+  → insert Friendship(UserAId < UserBId) trong transaction
+```
+
+### 7.3 Chat (Direct first) — API Plan
+
+| Method | Endpoint                                   | Access | Mô tả                                   | Status |
+| ------ | ------------------------------------------ | ------ | --------------------------------------- | ------ |
+| POST   | `/chats/direct/:userId`                    | [*]    | Tạo/lấy conversation direct với 1 user  | ✅     |
+| GET    | `/chats/conversations`                     | [*]    | Danh sách cuộc trò chuyện của tôi       | ✅     |
+| GET    | `/chats/conversations/:id/messages`        | [*]    | Lịch sử tin nhắn (cursor pagination)    | ✅     |
+| POST   | `/chats/conversations/:id/messages`        | [*]    | Gửi tin nhắn text/media                 | ✅     |
+| PATCH  | `/chats/conversations/:id/read`            | [*]    | Đánh dấu đã đọc tới message mới nhất    | ✅     |
+| DELETE | `/chats/messages/:id`                      | [*]    | Xóa mềm tin nhắn của mình               | ✅     |
+
+**Realtime channel (implemented):**
+
+- **Hub endpoint:** `GET /hubs/chat` (SignalR, JWT qua query `access_token`)
+- **Client -> Hub methods:**
+  - `JoinConversation(conversationId)`
+  - `LeaveConversation(conversationId)`
+- **Server -> Client events:**
+  - `chat:conversation-upsert`
+  - `chat:message-created`
+  - `chat:conversation-read`
+  - `chat:message-deleted`
+
+**Flow: Direct chat rule**
+
+```
+POST /chats/direct/:userId
+  → yêu cầu là bạn bè (Friendships)
+  → reject nếu có block
+  → upsert conversation direct duy nhất cho cặp user
+
+POST /chats/conversations/:id/messages
+  → validate participant
+  → idempotent theo (ConversationId, ClientMessageId)
+  → update Conversations.LastMessageAt
+```
+
+---
+
+## 8. FEED & EXPLORE ⏳ PENDING
+
+| Method | Endpoint            | Access | Mô tả                                           |
+| ------ | ------------------- | ------ | ----------------------------------------------- |
+| GET    | `/feed`             | [*]    | Feed cá nhân (từ following)                     |
+| GET    | `/explore`          | [-]    | Khám phá routines public (trending)             |
+| GET    | `/explore/routines` | [-]    | Browse routines public (filter: category, sort) |
+| GET    | `/explore/users`    | [-]    | Tìm kiếm users                                  |
+
+**Flow: Feed**
+
+```
+GET /feed
+  → lấy danh sách UserIds mà tôi đang follow
+  → lấy các TaskLogs (evidence, completed) của họ
+  → lấy các Routines public họ vừa tạo/cập nhật
+  → sort theo CreatedAt DESC
+  → trả về paginated feed items
+```
+
+---
+
+## 9. POSTS & EVIDENCE (Check-in sharing) ⏳ PENDING
+
+| Method | Endpoint                         | Access | Mô tả                              |
+| ------ | -------------------------------- | ------ | ---------------------------------- |
+| GET    | `/posts`                         | [-]    | Danh sách posts public             |
+| GET    | `/posts/:id`                     | [-]    | Chi tiết post                      |
+| POST   | `/posts`                         | [*]    | Tạo post check-in (share progress) |
+| DELETE | `/posts/:id`                     | [*]    | Xóa post của mình                  |
+| POST   | `/posts/:id/like`                | [*]    | Like / Unlike post                 |
+| GET    | `/posts/:id/likes`               | [-]    | Danh sách người like               |
+| POST   | `/posts/:id/comments`            | [*]    | Comment vào post                   |
+| GET    | `/posts/:id/comments`            | [-]    | Danh sách comments                 |
+| PATCH  | `/posts/:id/comments/:commentId` | [*]    | Sửa comment của mình               |
+| DELETE | `/posts/:id/comments/:commentId` | [*]    | Xóa comment của mình               |
+| DELETE | `/admin/posts/:id`               | [A]    | Admin xóa post vi phạm             |
+| DELETE | `/admin/comments/:id`            | [A]    | Admin xóa comment vi phạm          |
+
+**Post Types:** `CheckIn` (share check-in hôm nay) · `RoutineShare` (giới thiệu routine) · `Milestone` (streak achievement)
+
+---
+
+## 10. REELS (Video Evidence) ⏳ PENDING — Premium only
+
+| Method | Endpoint              | Access | Mô tả                                  |
+| ------ | --------------------- | ------ | -------------------------------------- |
+| GET    | `/reels`              | [-]    | Danh sách reels (short video check-in) |
+| GET    | `/reels/:id`          | [-]    | Chi tiết reel                          |
+| POST   | `/reels`              | [*]    | Upload reel (video ≤ 60s) — Premium    |
+| DELETE | `/reels/:id`          | [*]    | Xóa reel của mình                      |
+| POST   | `/reels/:id/like`     | [*]    | Like / Unlike reel                     |
+| POST   | `/reels/:id/comments` | [*]    | Comment                                |
+| GET    | `/reels/:id/comments` | [-]    | Danh sách comments                     |
+| DELETE | `/admin/reels/:id`    | [A]    | Admin moderation                       |
+
+> [!NOTE]
+> Upload reels cần tích hợp cloud storage (Firebase Storage / Cloudinary). Backend nhận pre-signed URL request, FE upload trực tiếp.
+
+**Backend media upload hiện có:**
+
+- `POST /media/sign-upload` `[*]`: trả về Cloudinary signed params để FE upload trực tiếp.
+
+---
+
+## 11. CREATOR — Quản lý nội dung ⏳ PENDING
+
+> Creator = User có ít nhất 1 Public Routine. Không cần role riêng.
+
+| Method | Endpoint                   | Access | Mô tả                                                  |
+| ------ | -------------------------- | ------ | ------------------------------------------------------ |
+| GET    | `/routines/me/public`      | [*]    | Routines public của tôi                                |
+| GET    | `/routines/:id/stats`      | [*]    | Thống kê routine: số lượt copy, followers              |
+| GET    | `/routines/:id/copies`     | [*]    | Danh sách users đã copy routine                        |
+| GET    | `/creator/dashboard`       | [*]    | Dashboard creator: total copies, followers, engagement |
+| PUT    | `/routines/:id/visibility` | [*]    | Thay đổi visibility (Public/Private)                   |
+| GET    | `/routines/:id/reviews`    | [-]    | Reviews/ratings của routine                            |
+| POST   | `/routines/:id/reviews`    | [*]    | Đánh giá routine (chỉ users đã dùng)                   |
+
+---
+
+## 12. USER ANALYTICS ✅ DONE (User scope)
+
+| Method | Endpoint                       | Access | Mô tả                                        |
+| ------ | ------------------------------ | ------ | -------------------------------------------- |
+| GET    | `/analytics/me/overview`       | [*]    | Tổng quan: streak, completion rate, best day |
+| GET    | `/analytics/me/streaks`        | [*]    | Streak history (hiện tại + lịch sử)          |
+| GET    | `/analytics/me/heatmap`        | [*]    | Heatmap hoạt động theo năm (GitHub-style)    |
+| GET    | `/analytics/me/routines`       | [*]    | Performance từng routine (completion %)      |
+| GET    | `/analytics/me/routines/:id`   | [*]    | Chi tiết analytics 1 routine theo thời gian  |
+| GET    | `/analytics/me/tasks`          | [*]    | Task completion stats theo category          |
+| GET    | `/analytics/me/progress-chart` | [*]    | Biểu đồ tiến độ theo tuần/tháng              |
+
+> [!NOTE]
+> Các endpoint User Analytics ở bảng trên đã được triển khai trong `AnalyticsController`; phần analytics cho admin dashboard vẫn chưa có.
+
+**Response mẫu `GET /analytics/me/overview`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "current_streak": 14,
+    "longest_streak": 30,
+    "total_checkins": 284,
+    "completion_rate_7d": 87.5,
+    "completion_rate_30d": 72.3,
+    "best_day_of_week": "Monday",
+    "total_routines": 5,
+    "active_routines": 3,
+    "total_tasks_completed_today": 8,
+    "total_tasks_today": 10
+  }
+}
+```
+
+---
+
+## 13. ADMIN MANAGEMENT 🔨 IN PROGRESS
+
+| Method | Endpoint                       | Access | Mô tả                                        |
+| ------ | ------------------------------ | ------ | -------------------------------------------- |
+| GET    | `/admin/dashboard`             | [A]    | Thống kê tổng: users, routines, revenue      |
+| GET    | `/admin/dashboard/revenue`     | [A]    | Doanh thu theo tháng                         |
+| GET    | `/admin/dashboard/engagement`  | [A]    | Check-in rate, active users theo ngày        |
+| GET    | `/admin/users`                 | [A]    | Danh sách users (filter, search, pagination) |
+| GET    | `/admin/users/:id`             | [A]    | Chi tiết user                                |
+| PATCH  | `/admin/users/:id`             | [A]    | Cập nhật user (ban, role)                    |
+| GET    | `/admin/routines`              | [A]    | Tất cả routines public                       |
+| PATCH  | `/admin/routines/:id/moderate` | [A]    | Moderate routine (approve/reject/flag)       |
+| GET    | `/admin/reports`               | [A]    | Danh sách báo cáo vi phạm                    |
+| PATCH  | `/admin/reports/:id`           | [A]    | Xử lý báo cáo                                |
+| GET    | `/admin/subscriptions`         | [A]    | Tất cả subscriptions                         |
+| GET    | `/admin/payments`              | [A]    | Tất cả giao dịch                             |
+
+**Response mẫu `GET /admin/dashboard`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "total_users": 1284,
+    "new_users_30d": 203,
+    "active_users_7d": 456,
+    "total_routines": 3401,
+    "total_checkins_today": 2840,
+    "premium_subscribers": 128,
+    "monthly_revenue_vnd": 12800000,
+    "churn_rate_30d": 5.2
+  }
+}
+```
+
+**Tiến độ hiện tại:**
+
+- ✅ `GET /admin/users`
+- ✅ `GET /admin/users/:id`
+- ✅ `POST /admin/users`
+- ⏳ Các endpoint admin khác chưa triển khai
+
+---
+
+## 14. NOTIFICATIONS ⏳ PENDING
+
+| Method | Endpoint                  | Access | Mô tả               |
+| ------ | ------------------------- | ------ | ------------------- |
+| GET    | `/notifications`          | [*]    | Danh sách thông báo |
+| PATCH  | `/notifications/:id/read` | [*]    | Đánh dấu đã đọc     |
+| PATCH  | `/notifications/read-all` | [*]    | Đọc tất cả          |
+| DELETE | `/notifications/:id`      | [*]    | Xóa thông báo       |
+
+**Notification triggers:** Follow mới · Like post · Comment · Check-in reminder · Streak milestone
+
+---
+
+## Error Codes
+
+| Code                   | HTTP | Mô tả                              |
+| ---------------------- | ---- | ---------------------------------- |
+| `UNAUTHORIZED`         | 401  | Chưa đăng nhập                     |
+| `FORBIDDEN`            | 403  | Không có quyền                     |
+| `NOT_FOUND`            | 404  | Không tìm thấy resource            |
+| `PREMIUM_REQUIRED`     | 403  | Cần Premium để dùng tính năng này  |
+| `SUBSCRIPTION_EXPIRED` | 403  | Subscription đã hết hạn            |
+| `ROUTINE_NOT_OWNED`    | 403  | Không phải routine của bạn         |
+| `ALREADY_CHECKED_IN`   | 409  | Đã check-in task này hôm nay       |
+| `ALREADY_FOLLOWING`    | 409  | Đã follow user này rồi             |
+| `ALREADY_FRIENDS`      | 409  | Hai user đã là bạn bè              |
+| `REQUEST_ALREADY_PENDING` | 409 | Đã có lời mời kết bạn đang chờ     |
+| `BLOCKED_USER`         | 403  | Không thể thao tác do block        |
+| `NOT_FRIEND`           | 403  | Chỉ chat được với bạn bè           |
+| `CONVERSATION_NOT_FOUND` | 404 | Không tìm thấy cuộc trò chuyện     |
+| `ALREADY_REVIEWED`     | 409  | Đã đánh giá routine này rồi        |
+| `UNDO_TOO_LATE`        | 400  | Chỉ undo được check-in của hôm nay |
+| `VALIDATION_ERROR`     | 422  | Dữ liệu đầu vào không hợp lệ       |
+| `PAYMENT_FAILED`       | 402  | Thanh toán thất bại                |
+
+---
+
+## Implementation Priority
+
+| Phase        | Module                                             | Effort     | Priority  |
+| ------------ | -------------------------------------------------- | ---------- | --------- |
+| ✅ Done      | Auth, Routine CRUD, Task Tracking, Categories      | —          | —         |
+| ✅ Done      | Phase 3 - User Analytics (streak, heatmap, completion chart) | Medium     | —         |
+| **Phase 4**  | Subscription & Payment (PayOS complete, VNPay/MoMo pending)  | High       | 🔴 High   |
+| ✅ Done      | Phase 5 - Social Graph API (Follow/Block/Friend)    | Medium     | — |
+| ✅ Done      | Phase 5.1 - Chat Direct API (Conversation/Message/Read) | Medium | — |
+| **Phase 6**  | Posts, Comments, Likes                             | Medium     | 🟠 Medium |
+| **Phase 7**  | Admin Dashboard                                    | Low-Medium | 🟡 Medium |
+| **Phase 8**  | Creator Dashboard                                  | Low        | 🟢 Low    |
+| **Phase 9**  | Reels (video upload)                               | High       | 🟢 Low    |
+| **Phase 10** | Notifications (push)                               | Medium     | 🟢 Low    |

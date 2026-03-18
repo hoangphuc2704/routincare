@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, UserCircle } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, UserCircle, KeyRound, PencilLine } from 'lucide-react';
 import { message } from 'antd';
 import userApi from '../../../api/userApi';
 import analyticsApi from '../../../api/analyticsApi';
-import { Activity, Flame, Target, Trophy, Settings, LayoutDashboard, Crown, Archive } from 'lucide-react';
+import routineApi from '../../../api/routineApi';
+import mediaApi from '../../../api/mediaApi';
+import { Activity, Flame, Target, Trophy, Settings, LayoutDashboard, Crown, Archive, Clock3, Eye } from 'lucide-react';
 import Heatmap from '../../../components/Heatmap';
 import UserHeader from '../../../components/UserHeader';
 
@@ -30,6 +32,9 @@ function Profile() {
   const [analytics, setAnalytics] = useState(null);
   const [heatmapData, setHeatmapData] = useState([]);
   const [activeTab, setActiveTab] = useState(userId ? 'routines' : 'dashboard');
+  const [routines, setRoutines] = useState([]);
+  const [routinesLoading, setRoutinesLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -70,9 +75,10 @@ function Profile() {
 
     const fetchHeatmap = async () => {
       try {
-        const res = await analyticsApi.getHeatmap();
+        const currentYear = new Date().getFullYear();
+        const res = await analyticsApi.getHeatmap(currentYear);
         const data = res.data?.data || res.data;
-        setHeatmapData(data);
+        setHeatmapData(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to fetch heatmap:', err);
       }
@@ -85,6 +91,81 @@ function Profile() {
     fetchUser();
   }, [userId, isMe]);
 
+  useEffect(() => {
+    const fetchRoutines = async () => {
+      if (!isMe || activeTab !== 'routines') return;
+      try {
+        setRoutinesLoading(true);
+        const res = await routineApi.getMyRoutines();
+        const data = res.data?.data || res.data;
+        const mapped = (data || []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          repeatType: item.repeatType,
+          repeatDays: item.repeatDays,
+          visibility: item.visibility,
+          categoryName: item.category?.name,
+          remindTime: item.remindTime,
+          taskCount: item.tasks?.length ?? item.routineTasks?.length ?? item.taskCount ?? 0,
+        }));
+        setRoutines(mapped);
+      } catch (err) {
+        console.error('Failed to fetch routines:', err);
+        message.error('Không tải được danh sách routine');
+      } finally {
+        setRoutinesLoading(false);
+      }
+    };
+
+    fetchRoutines();
+  }, [activeTab, isMe]);
+
+  const visibilityLabel = (value) => {
+    if (value === 0) return 'Private';
+    if (value === 1) return 'Public';
+    if (value === 2) return 'Subscribers';
+    return 'Unknown';
+  };
+
+  const repeatLabel = (repeatType, repeatDays) => {
+    if (repeatType === 1) return `Weekly: ${repeatDays || '—'}`;
+    return 'Daily';
+  };
+
+  const toNumber = (value, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const getCompletionPercent = (overview) => {
+    // Support both old and new API field names.
+    const raw =
+      overview?.completionRate ??
+      overview?.completion_rate_7d ??
+      overview?.completionRate7d ??
+      0;
+    const value = toNumber(raw, 0);
+    return value <= 1 ? Math.round(value * 100) : Math.round(value);
+  };
+
+  const analyticsStats = {
+    totalRoutines: toNumber(analytics?.totalRoutines ?? analytics?.total_routines),
+    currentStreak: toNumber(analytics?.currentStreak ?? analytics?.current_streak),
+    longestStreak: toNumber(analytics?.longestStreak ?? analytics?.longest_streak),
+    completionPercent: getCompletionPercent(analytics),
+  };
+
+  const isValidUrl = (value) => {
+    if (!value) return true;
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch (err) {
+      return false;
+    }
+  };
+
   const handleProfileChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
@@ -93,15 +174,86 @@ function Profile() {
     setPasswordForm({ ...passwordForm, [e.target.name]: e.target.value });
   };
 
+  const handleAvatarFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      message.warning('Vui lòng chọn file ảnh');
+      e.target.value = '';
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      message.warning('Ảnh tối đa 5MB');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+
+      const signRes = await mediaApi.signUpload({ folder: 'routin/avatar', resourceType: 'image' });
+      const signData = signRes.data?.data || signRes.data;
+
+      if (!signData?.uploadUrl || !signData?.apiKey || !signData?.timestamp || !signData?.signature) {
+        throw new Error('Missing signed upload data');
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', String(signData.apiKey));
+      formData.append('timestamp', String(signData.timestamp));
+      formData.append('signature', String(signData.signature));
+      if (signData.folder) {
+        formData.append('folder', String(signData.folder));
+      }
+
+      const uploadRes = await fetch(signData.uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const uploaded = await uploadRes.json();
+      const secureUrl = uploaded.secure_url || uploaded.url;
+      if (!secureUrl) {
+        throw new Error('Upload success but no URL returned');
+      }
+
+      setProfile((prev) => ({ ...prev, avatarUrl: secureUrl }));
+      message.success('Tải ảnh lên thành công');
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+      message.error('Không thể tải ảnh lên');
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    if (!profile.fullName?.trim()) {
+      message.warning('Họ và tên là bắt buộc');
+      return;
+    }
+    if (!isValidUrl(profile.avatarUrl?.trim())) {
+      message.warning('Avatar URL không hợp lệ');
+      return;
+    }
     try {
       setSavingProfile(true);
       const payload = {
-        fullName: profile.fullName,
-        phoneNumber: profile.phoneNumber,
-        avatarUrl: profile.avatarUrl,
-        bio: profile.bio,
+        fullName: profile.fullName.trim(),
+        phoneNumber: profile.phoneNumber?.trim() || null,
+        avatarUrl: profile.avatarUrl?.trim() || null,
+        bio: profile.bio?.trim() || null,
       };
       await userApi.updateMe(payload);
       
@@ -129,6 +281,10 @@ function Profile() {
     }
     if (newPassword !== confirmNewPassword) {
       message.error('Mật khẩu mới không khớp');
+      return;
+    }
+    if (newPassword.length < 6) {
+      message.warning('Mật khẩu mới tối thiểu 6 ký tự');
       return;
     }
     try {
@@ -208,25 +364,25 @@ function Profile() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                <StatCard 
                  title="Routines" 
-                 value={analytics?.totalRoutines || 0} 
+                 value={analyticsStats.totalRoutines} 
                  icon={<Target className="text-blue-400" size={24} />} 
                  sub="Active"
                />
                <StatCard 
                  title="Streak" 
-                 value={analytics?.currentStreak || 0} 
+                 value={analyticsStats.currentStreak} 
                  icon={<Flame className="text-orange-500" size={24} />} 
                  sub="Days"
                />
                <StatCard 
                  title="Completion" 
-                 value={`${Math.round((analytics?.completionRate || 0) * 100)}%`} 
+                 value={`${analyticsStats.completionPercent}%`} 
                  icon={<Activity className="text-lime-400" size={24} />} 
                  sub="Rate"
                />
                <StatCard 
                  title="Best Streak" 
-                 value={analytics?.longestStreak || 0} 
+                 value={analyticsStats.longestStreak} 
                  icon={<Trophy className="text-yellow-400" size={24} />} 
                  sub="Record"
                />
@@ -243,9 +399,12 @@ function Profile() {
                         <p className="text-[10px] text-neutral-500 uppercase tracking-tighter">Your current subscription</p>
                     </div>
                 </div>
-                <button className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all">
-                    UPGRADE PRO
-                </button>
+                <Link
+                  to="/customer/subscriptions"
+                  className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
+                >
+                  UPGRADE PRO
+                </Link>
             </div>
 
             {/* Placeholder for Heatmap */}
@@ -263,12 +422,62 @@ function Profile() {
         )}
 
         {activeTab === 'routines' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="text-center py-20 bg-neutral-900 rounded-3xl border border-dashed border-white/10">
-                    <Archive size={48} className="mx-auto text-neutral-800 mb-4" />
-                    <p className="text-neutral-500 font-medium">Public routines will appear here.</p>
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {isMe ? (
+              routinesLoading ? (
+                <div className="flex justify-center py-16">
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-lime-400"></div>
                 </div>
-            </div>
+              ) : routines.length === 0 ? (
+                <div className="text-center py-16 bg-neutral-900 rounded-3xl border border-dashed border-white/10">
+                  <Archive size={48} className="mx-auto text-neutral-800 mb-4" />
+                  <p className="text-neutral-500 font-medium">Chưa có routine nào. Tạo mới nhé!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">Your Routines</h3>
+                    <span className="text-xs text-neutral-500">{routines.length} mục</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                  {routines.map((routine) => (
+                    <Link
+                      to={`/customer/selfroutin/${routine.id}`}
+                      key={routine.id}
+                      className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-gradient-to-br from-neutral-900 via-neutral-800 to-black hover:border-lime-400/60 transition-all active:scale-[0.98]"
+                    >
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(163,230,53,0.22),transparent_45%)]" />
+
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-full border border-white/20 bg-black/30 backdrop-blur-sm flex items-center justify-center text-lime-300">
+                          <Target size={18} />
+                        </div>
+                      </div>
+
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
+                        <h3 className="text-xs font-semibold text-white truncate">{routine.title}</h3>
+                        <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-300">
+                          <span>{routine.taskCount} task</span>
+                          <span className="truncate ml-2">{repeatLabel(routine.repeatType, routine.repeatDays)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-400">
+                          <span className="inline-flex items-center gap-1"><Eye size={10} /> {visibilityLabel(routine.visibility)}</span>
+                          {routine.remindTime && <span className="inline-flex items-center gap-1"><Clock3 size={10} /> {routine.remindTime}</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="text-center py-20 bg-neutral-900 rounded-3xl border border-dashed border-white/10">
+                <Archive size={48} className="mx-auto text-neutral-800 mb-4" />
+                <p className="text-neutral-500 font-medium">Routines của thành viên này chưa được công khai.</p>
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'settings' && isMe && (
@@ -278,12 +487,12 @@ function Profile() {
             className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Thông tin cá nhân</h2>
+              <h2 className="text-xl font-semibold flex items-center gap-2"><PencilLine size={18} /> Thông tin cá nhân</h2>
               {loading && <span className="text-xs text-neutral-400">Đang tải...</span>}
             </div>
 
             <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Họ và tên</span>
+              <span className="text-neutral-300">Họ và tên <span className="text-red-400">*</span></span>
               <input
                 type="text"
                 name="fullName"
@@ -292,6 +501,7 @@ function Profile() {
                 className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
                 required
               />
+              <p className="text-[11px] text-neutral-500">Field bắt buộc cho PATCH /api/Users/me</p>
             </label>
 
             <label className="space-y-2 text-sm">
@@ -324,8 +534,37 @@ function Profile() {
                 value={profile.avatarUrl}
                 onChange={handleProfileChange}
                 className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                placeholder="https://..."
               />
+              <p className="text-[11px] text-neutral-500">Optional, chấp nhận http/https</p>
             </label>
+
+            <div className="space-y-2 text-sm">
+              <span className="text-neutral-300">Tải ảnh đại diện từ máy</span>
+              <div className="rounded-xl border border-white/10 bg-neutral-800 p-3 space-y-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileUpload}
+                  disabled={uploadingAvatar}
+                  className="w-full text-sm text-neutral-300 file:mr-3 file:rounded-lg file:border-0 file:bg-lime-400 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-black"
+                />
+                <div className="flex items-center gap-3">
+                  {profile.avatarUrl ? (
+                    <img
+                      src={profile.avatarUrl}
+                      alt="avatar-preview"
+                      className="h-12 w-12 rounded-full object-cover border border-white/10"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-neutral-700 border border-white/10" />
+                  )}
+                  <p className="text-[11px] text-neutral-500">
+                    {uploadingAvatar ? 'Đang tải ảnh lên...' : 'Chọn ảnh để tự động upload và điền Avatar URL'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <label className="space-y-2 text-sm">
               <span className="text-neutral-300">Bio</span>
@@ -351,11 +590,11 @@ function Profile() {
             className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Đổi mật khẩu</h2>
+              <h2 className="text-xl font-semibold flex items-center gap-2"><KeyRound size={18} /> Đổi mật khẩu</h2>
             </div>
 
             <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Mật khẩu hiện tại</span>
+              <span className="text-neutral-300">Mật khẩu hiện tại <span className="text-red-400">*</span></span>
               <input
                 type="password"
                 name="currentPassword"
@@ -367,7 +606,7 @@ function Profile() {
             </label>
 
             <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Mật khẩu mới</span>
+              <span className="text-neutral-300">Mật khẩu mới <span className="text-red-400">*</span></span>
               <input
                 type="password"
                 name="newPassword"
@@ -376,6 +615,7 @@ function Profile() {
                 className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
                 required
               />
+              <p className="text-[11px] text-neutral-500">Tối thiểu 6 ký tự</p>
             </label>
 
             <label className="space-y-2 text-sm">

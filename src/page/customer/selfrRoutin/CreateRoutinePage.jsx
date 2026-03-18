@@ -74,18 +74,17 @@ export default function CreateRoutinePage() {
                 finalCategoryId = match ? match.id : dbCategories[0].id;
             }
 
-            // 1. Create Routine
-            // Note: visibility: 1 (Private) as Integer to match .NET Enum requirements
+            // 1. Create Routine (match BE contract: title, repeatType, repeatDays, remindTime, visibility)
+            // BE expects enum numbers for repeatType/visibility
             const routinePayload = {
-                name: form.name,
+                title: form.name,
                 description: form.description || "Routine created by user",
-                schedule: {
-                    type: form.frequency,
-                    daysOfWeek: [] 
-                },
-                remindAt: "08:00:00", 
-                visibility: 1, 
-                categoryId: finalCategoryId || undefined
+                themeColor: null,
+                categoryId: finalCategoryId || null,
+                repeatType: form.frequency === 'Weekly' ? 1 : 0, // 0:Daily, 1:Weekly
+                repeatDays: form.frequency === 'Weekly' ? '2,4,6' : null,
+                remindTime: "08:00:00",
+                visibility: 1, // 0:Private,1:Public,2:SubscribersOnly
             };
 
             console.log('Sending Real Payload:', routinePayload);
@@ -97,27 +96,22 @@ export default function CreateRoutinePage() {
                 throw new Error("Server response missing routine ID");
             }
 
-            // 2. Add Task to Routine
-            const taskPayload = {
-                name: form.name,
-                type: form.type === 'Number' ? 'Quantity' : 'Checkbox',
-                targetValue: parseInt(form.targetValue) || 1,
-                unit: form.type === 'Number' ? 'Units' : 'Boolean',
-                order: 1
-            };
-
-            await routineApi.addTask(routine.id, taskPayload);
-
             message.success('Tạo routine thành công! ✨');
             navigate('/customer/selfroutin');
         } catch (err) {
             console.error('SERVER REJECTION:', err.response?.data || err);
             const errorData = err.response?.data;
+            const validationErrors = errorData?.errors;
+            if (validationErrors) {
+                // Log raw validation payload for quick copy-paste
+                console.error('Validation errors detail:', validationErrors);
+            }
+
             let errorMsg = 'Không thể lưu routine';
             
-            if (errorData?.errors) {
+            if (validationErrors) {
                 // Formatting server validation errors
-                errorMsg = Object.entries(errorData.errors)
+                errorMsg = Object.entries(validationErrors)
                     .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
                     .join(' | ');
             } else if (errorData?.message) {
@@ -167,34 +161,60 @@ export default function CreateRoutinePage() {
                                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-lime-400"></div>
                              </div>
                         ) : (
-                            <div className="grid grid-cols-2 gap-4">
-                                {staticCategories.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => {
-                                            const dbCat = dbCategories.find(c => 
-                                                c.name.toLowerCase().includes(cat.name.toLowerCase()) || 
-                                                cat.name.toLowerCase().includes(c.name.toLowerCase())
-                                            );
-                                            setForm({
-                                                ...form, 
-                                                category: cat.name,
-                                                categoryId: dbCat ? dbCat.id : (dbCategories[0]?.id || '')
-                                            });
-                                            nextStep();
-                                        }}
-                                        className={`relative p-6 rounded-3xl border transition-all duration-300 flex flex-col gap-4 text-left active:scale-95 group ${form.category === cat.name ? 'border-lime-400 bg-lime-400/5' : 'border-neutral-800 bg-neutral-900/50'}`}
-                                    >
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cat.bg} ${cat.color} group-hover:scale-110 transition-transform`}>
-                                            {cat.icon}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-black text-white uppercase tracking-tighter">{cat.name}</h3>
-                                            <span className="text-[10px] text-neutral-500 font-bold uppercase">Level Up</span>
-                                        </div>
-                                        <ArrowRight size={16} className="absolute bottom-6 right-6 text-neutral-700 group-hover:text-lime-400 transition-colors" />
-                                    </button>
-                                ))}
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {staticCategories.map(cat => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => {
+                                                const dbCat = dbCategories.find(c => 
+                                                    c.name.toLowerCase().includes(cat.name.toLowerCase()) || 
+                                                    cat.name.toLowerCase().includes(c.name.toLowerCase())
+                                                );
+                                                setForm({
+                                                    ...form, 
+                                                    category: cat.name,
+                                                    categoryId: dbCat ? dbCat.id : (dbCategories[0]?.id || '')
+                                                });
+                                                nextStep();
+                                            }}
+                                            className={`relative p-6 rounded-3xl border transition-all duration-300 flex flex-col gap-4 text-left active:scale-95 group ${form.category === cat.name ? 'border-lime-400 bg-lime-400/5' : 'border-neutral-800 bg-neutral-900/50'}`}
+                                        >
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cat.bg} ${cat.color} group-hover:scale-110 transition-transform`}>
+                                                {cat.icon}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-white uppercase tracking-tighter">{cat.name}</h3>
+                                                <span className="text-[10px] text-neutral-500 font-bold uppercase">Level Up</span>
+                                            </div>
+                                            <ArrowRight size={16} className="absolute bottom-6 right-6 text-neutral-700 group-hover:text-lime-400 transition-colors" />
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {dbCategories.length > 0 && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest ml-1">Chọn Category từ server</label>
+                                        <select
+                                            value={form.categoryId || ''}
+                                            onChange={(e) => {
+                                                const selectedId = e.target.value;
+                                                const sel = dbCategories.find(c => c.id === selectedId);
+                                                setForm({
+                                                    ...form,
+                                                    categoryId: selectedId,
+                                                    category: sel?.name || form.category,
+                                                });
+                                            }}
+                                            className="w-full bg-neutral-900 border border-white/5 rounded-2xl px-5 py-4 text-white outline-none focus:ring-2 focus:ring-lime-400/50 transition-all font-bold appearance-none cursor-pointer"
+                                        >
+                                            <option value="">-- chọn category --</option>
+                                            {dbCategories.map((c) => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

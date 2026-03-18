@@ -1,16 +1,58 @@
 import React from 'react';
 
 export default function Heatmap({ data }) {
-    // Generate last 12 months of dates (simplified for mockup)
-    // In a real app, this would be much more complex to match days of week
     const weeks = 20; // Number of weeks to display
     const days = 7;
-    
-    // Mock data for the heatmap if none provided
-    const internalData = data || Array.from({ length: weeks * days }, (_, i) => ({
-        date: new Date(Date.now() - (weeks * days - i) * 86400000).toISOString().split('T')[0],
-        score: Math.floor(Math.random() * 5)
-    }));
+
+    const toNumber = (value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const toDateKey = (value) => {
+        if (!value) return null;
+        if (typeof value === 'string') return value.slice(0, 10);
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 10);
+    };
+
+    const normalizeScore = (raw) => {
+        // Normalize to 0..4 intensity levels.
+        const v = toNumber(raw);
+        if (v <= 0) return 0;
+        if (v <= 1) return 1;
+        if (v <= 2) return 2;
+        if (v <= 4) return 3;
+        return 4;
+    };
+
+    const scoreByDate = new Map();
+    (Array.isArray(data) ? data : []).forEach((item) => {
+        const dateKey = toDateKey(item?.date || item?.day || item?.summaryDate);
+        if (!dateKey) return;
+        const rawScore =
+            item?.score ??
+            item?.count ??
+            item?.value ??
+            item?.completedTasks ??
+            item?.completedCount ??
+            0;
+        scoreByDate.set(dateKey, normalizeScore(rawScore));
+    });
+
+    const totalCells = weeks * days;
+    const internalData = Array.from({ length: totalCells }, (_, i) => {
+        const diff = totalCells - 1 - i;
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - diff);
+        const key = d.toISOString().slice(0, 10);
+        return {
+            date: key,
+            score: scoreByDate.get(key) ?? 0,
+        };
+    });
 
     const getColor = (score) => {
         if (!score) return 'bg-zinc-900 border-white/5';
@@ -30,7 +72,7 @@ export default function Heatmap({ data }) {
                             return (
                                 <div
                                     key={dayIndex}
-                                    title={`${dataPoint?.date}: ${dataPoint?.score} points`}
+                                    title={`${dataPoint?.date}: ${dataPoint?.score} activity`}
                                     className={`w-3.5 h-3.5 rounded-sm border ${getColor(dataPoint?.score)} transition-colors hover:scale-125`}
                                 ></div>
                             );
