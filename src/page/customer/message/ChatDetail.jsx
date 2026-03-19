@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import chatApi from '../../../api/chatApi';
-import { ChevronLeft, Send, MoreVertical, Image, Smile, Phone, Video } from 'lucide-react';
+import { ChevronLeft, Send, MoreVertical, Image, Smile, Phone, Video, ShieldCheck, Dot } from 'lucide-react';
 import { message } from 'antd';
 
 export default function ChatDetail() {
@@ -17,6 +17,12 @@ export default function ChatDetail() {
 
     useEffect(() => {
         const fetchMessages = async () => {
+            if (!conversationId) {
+                setMessages([]);
+                setLoading(false);
+                return;
+            }
+
             try {
                 const res = await chatApi.getMessages(conversationId);
                 const data = res.data?.data || res.data;
@@ -29,20 +35,7 @@ export default function ChatDetail() {
             }
         };
 
-        if (conversationId && conversationId !== 'conv-1' && conversationId !== 'conv-2') {
-            fetchMessages();
-        } else {
-             // Mock messages for direct demo
-            setMessages([
-                { id: 1, senderId: 'user-2', content: 'Chào ông!', createdAt: new Date(Date.now() - 3600000).toISOString() },
-                { id: 2, senderId: 'me', content: 'Hello! Sao rùi?', createdAt: new Date(Date.now() - 1800000).toISOString() },
-                { id: 3, senderId: 'user-2', content: 'Ông đi gym chiều nay không?', createdAt: new Date(Date.now() - 900000).toISOString() },
-                { id: 4, senderId: 'me', content: 'Có chứ, lúc nào đi ông?', createdAt: new Date(Date.now() - 600000).toISOString() },
-                { id: 5, senderId: 'user-2', content: 'Tầm 5h nhé. Nhớ cầm theo tạ tay.', createdAt: new Date(Date.now() - 300000).toISOString() },
-                { id: 6, senderId: 'me', content: 'Ok ông nhé, chiều mai gym.', createdAt: new Date().toISOString() },
-            ]);
-            setLoading(false);
-        }
+        fetchMessages();
     }, [conversationId]);
 
     useEffect(() => {
@@ -76,29 +69,32 @@ export default function ChatDetail() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-black text-white font-sans max-w-lg mx-auto border-x border-white/10">
+        <div className="flex flex-col h-screen bg-gradient-to-b from-[#0b0b0f] via-[#0f1119] to-[#0b0b0f] text-white font-sans max-w-lg mx-auto border-x border-white/5">
             {/* Header */}
-            <header className="p-4 flex items-center justify-between bg-zinc-900 border-b border-white/5 sticky top-0 z-20">
+            <header className="p-4 pb-3 flex items-center justify-between bg-white/5 backdrop-blur-lg border-b border-white/10 sticky top-0 z-20">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-white hover:bg-white/10 rounded-full transition-all">
-                        <ChevronLeft size={28} />
+                        <ChevronLeft size={26} />
                     </button>
                     <div 
                         className="flex items-center gap-3 cursor-pointer group hover:bg-white/5 px-2 py-1 rounded-2xl transition-all active:scale-95"
                         onClick={() => navigate(`/profile/${partner.id || partner.userId}`)}
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 group-hover:border-lime-400 transition-all">
+                            <div className="w-11 h-11 rounded-full overflow-hidden border border-white/15 group-hover:border-lime-400 transition-all">
                                 <img
                                     src={partner.avatarUrl || partner.avatar || 'https://via.placeholder.com/150'}
-                                    alt={partner.fullName}
+                                    alt={partner.fullName || 'avatar'}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
                             <div>
-                                <h3 className="font-bold text-sm group-hover:text-lime-400 transition-all">{partner.fullName}</h3>
-                                <span className="text-[10px] text-lime-400 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 bg-lime-400 rounded-full"></span> Active now
+                                <h3 className="font-semibold text-sm group-hover:text-lime-400 transition-all flex items-center gap-1">
+                                    {partner.fullName || 'Nguoi dung'}
+                                    <ShieldCheck size={14} className="text-lime-300" />
+                                </h3>
+                                <span className="text-[11px] text-lime-300/80 flex items-center gap-1">
+                                    <Dot size={16} className="-ml-1" /> Active now
                                 </span>
                             </div>
                         </div>
@@ -114,13 +110,13 @@ export default function ChatDetail() {
             {/* Chat Area */}
             <main
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4 bg-black scrollbar-hide flex flex-col pt-6"
+                className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-transparent via-white/2 to-transparent scrollbar-hide flex flex-col pt-6"
             >
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-lime-400"></div>
                     </div>
-                ) : (
+                ) : messages.length > 0 ? (
                     messages.map((msg) => {
                         const isMe = msg.senderId === 'me' || msg.senderId === JSON.parse(localStorage.getItem('user'))?.userId;
                         return (
@@ -129,25 +125,30 @@ export default function ChatDetail() {
                                 className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
                             >
                                 <div
-                                    className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
+                                    className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm shadow-lg shadow-black/30 border border-white/5 ${
                                         isMe
                                             ? 'bg-lime-400 text-black font-semibold rounded-br-none'
-                                            : 'bg-zinc-800 text-white rounded-bl-none'
+                                            : 'bg-white/5 text-white rounded-bl-none'
                                     }`}
                                 >
                                     <p className="leading-relaxed">{msg.content}</p>
-                                    <span className={`text-[9px] mt-1 block opacity-60 ${isMe ? 'text-black text-right' : 'text-zinc-400'}`}>
+                                    <span className={`text-[10px] mt-1 block opacity-70 ${isMe ? 'text-black text-right' : 'text-zinc-300'}`}>
                                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
                             </div>
                         );
                     })
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-zinc-500 text-sm bg-white/5 border border-white/10 rounded-2xl">
+                        <p className="font-semibold text-white">Chua co tin nhan</p>
+                        <p className="text-xs text-zinc-400 mt-1">Hay gui tin nhan dau tien.</p>
+                    </div>
                 )}
             </main>
 
             {/* Input Area */}
-            <footer className="p-4 bg-zinc-900 border-t border-white/5 sticky bottom-0">
+            <footer className="p-4 bg-white/5 border-t border-white/10 backdrop-blur-md sticky bottom-0">
                 <form
                     onSubmit={handleSend}
                     className="flex items-center gap-3"
@@ -163,7 +164,7 @@ export default function ChatDetail() {
                             placeholder="Type a message..."
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            className="w-full bg-black border border-white/10 rounded-full py-3 px-5 text-sm outline-none focus:ring-1 focus:ring-lime-400 transition-all placeholder:text-zinc-600"
+                            className="w-full bg-black/40 border border-white/10 rounded-full py-3 px-5 text-sm outline-none focus:ring-1 focus:ring-lime-400 transition-all placeholder:text-zinc-600"
                         />
                     </div>
 

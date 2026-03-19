@@ -201,6 +201,7 @@ function GoogleButton(props, ref) {
         }
 
         const userData = res.data?.data || res.data;
+        const profile = userData?.user || userData;
 
         if (!userData?.accessToken) {
           throw new Error('No access token received');
@@ -209,12 +210,13 @@ function GoogleButton(props, ref) {
         setAuthTokens(userData.accessToken, userData.refreshToken);
 
         const user = {
-          userId: userData.userId || userData.id,
-          fullName: userData.fullName || userData.name,
-          email: userData.email,
-          roleId: userData.roleId,
-          roleName: userData.roleName || userData.role,
-          avatar: userData.avatar,
+          userId: profile.userId || profile.id,
+          fullName: profile.fullName || profile.name,
+          email: profile.email,
+          roleId: profile.roleId,
+          roleName: profile.roleName || profile.role || (Array.isArray(userData.roles) ? userData.roles[0] : undefined),
+          avatar: profile.avatar,
+          avatarUrl: profile.avatarUrl || profile.avatar,
         };
 
         setUser(user);

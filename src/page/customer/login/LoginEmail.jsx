@@ -23,6 +23,7 @@ function LoginEmail() {
 
       if (res.data?.success !== false) {
         const userData = res.data?.data || res.data;
+        const profile = userData?.user || userData;
 
 
         if (userData.accessToken) {
@@ -33,11 +34,12 @@ function LoginEmail() {
         }
 
         const user = {
-          userId: userData.userId || userData.id,
-          fullName: userData.fullName || userData.name,
-          email: userData.email || email,
-          roleId: userData.roleId,
-          roleName: userData.roleName || userData.role,
+          userId: profile.userId || profile.id,
+          fullName: profile.fullName || profile.name,
+          email: profile.email || email,
+          roleId: profile.roleId,
+          roleName: profile.roleName || profile.role || (Array.isArray(userData.roles) ? userData.roles[0] : undefined),
+          avatarUrl: profile.avatarUrl || profile.avatar,
         };
 
         localStorage.setItem('user', JSON.stringify(user));

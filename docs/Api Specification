@@ -72,10 +72,11 @@
 | ------ | -------------------- | ------ | --------------------------------------------------------- | ------ |
 | GET    | `/users`             | [A]    | Danh sách tất cả users                                    | ✅      |
 | GET    | `/users/:id`         | [A]    | Chi tiết user                                             | ✅      |
+| GET    | `/users/search`      | [-]    | Tìm user công khai theo tên/email (`keyword,page,pageSize`) | ✅   |
 | GET    | `/users/me`          | [*]    | Thông tin user hiện tại                                   | ✅      |
 | PATCH  | `/users/me`          | [*]    | Cập nhật profile (name, bio, avatar)                      | ✅      |
 | PATCH  | `/users/me/password` | [*]    | Đổi mật khẩu                                              | ✅      |
-| GET    | `/users/:id/profile` | [-]    | Xem profile public của user khác (streak, follower count) | ⏳      |
+| GET    | `/users/:id/profile` | [-]    | Xem profile public của user khác (streak, follower count) | ✅      |
 
 **Admin route aliases đã có:**
 
@@ -108,11 +109,15 @@
 | ------ | -------------------- | ------ | --------------------------- |
 | GET    | `/routines/me`       | [*]    | Danh sách routine của tôi   |
 | GET    | `/routines/today`    | [*]    | Routines hôm nay + progress |
-| GET    | `/routines/:id`      | [*]    | Chi tiết routine + tasks    |
+| GET    | `/routines/search`   | [-]    | Tìm routine public (`keyword,page,pageSize`) |
+| GET    | `/routines/:id`      | [*]    | Chi tiết routine + tasks (chỉ Owner hoặc routine Public) |
 | POST   | `/routines`          | [*]    | Tạo routine mới             |
 | PUT    | `/routines/:id`      | [*]    | Cập nhật routine            |
 | DELETE | `/routines/:id`      | [*]    | Xóa routine (soft delete)   |
 | POST   | `/routines/:id/copy` | [*]    | Copy routine của người khác |
+
+> [!NOTE]
+> Endpoint `GET /routines/:id` đã chặn truy cập routine Private của người khác. Chỉ chủ sở hữu hoặc routine có `Visibility = Public` mới xem được.
 
 ### 4.1 Task Management ✅ DONE
 

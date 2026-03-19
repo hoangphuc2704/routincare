@@ -123,11 +123,6 @@ export default function BottomNav({ activeItem }) {
             <span className="text-[10px] font-bold uppercase tracking-tighter">Plan</span>
           </Link>
 
-          <Link to="/customer/myfeeds/grid" className={`flex flex-col items-center gap-1 transition-all ${getItemClass('grid')}`}>
-            <GridIcon className="w-6 h-6" filled={activeItem === 'grid'} />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Feeds</span>
-          </Link>
-
           <Link to="/customer/message" className={`flex flex-col items-center gap-1 transition-all ${getItemClass('message')}`}>
             <MessageCircleIcon className="w-6 h-6" filled={activeItem === 'message'} />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Chat</span>

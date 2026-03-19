@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BadgeCheck, Crown, ExternalLink, History, Loader2, Wallet, XCircle } from 'lucide-react';
 import { message } from 'antd';
 import BottomNav from '../../../components/BottomNav';
@@ -54,6 +54,15 @@ export default function SubscriptionPage() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [payments, setPayments] = useState([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterFrom, setFilterFrom] = useState('');
+  const [filterTo, setFilterTo] = useState('');
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const pollIntervalRef = useRef(null);
+  const pollAttemptsRef = useRef(0);
+  const lastPollTriggerRef = useRef(0);
 
   const fetchPlans = async () => {
     try {
@@ -69,24 +78,28 @@ export default function SubscriptionPage() {
     }
   };
 
-  const fetchCurrentSubscription = async () => {
+  const fetchCurrentSubscription = async (options = {}) => {
+    const { silent = false } = options;
     try {
-      setSubscriptionLoading(true);
+      if (!silent) setSubscriptionLoading(true);
       const res = await subscriptionApi.getMe();
       const data = res.data?.data || res.data;
       const normalized = Array.isArray(data) ? data[0] : data;
       setCurrentSubscription(normalized || null);
+      return normalized || null;
     } catch (err) {
       console.error('Failed to fetch current subscription:', err);
       setCurrentSubscription(null);
+      return null;
     } finally {
-      setSubscriptionLoading(false);
+      if (!silent) setSubscriptionLoading(false);
     }
   };
 
-  const fetchPayments = async () => {
+  const fetchPayments = async (options = {}) => {
+    const { silent = false } = options;
     try {
-      setPaymentsLoading(true);
+      if (!silent) setPaymentsLoading(true);
       const res = await paymentApi.getMyPayments();
       const data = res.data?.data || res.data;
       setPayments(Array.isArray(data) ? data : []);
@@ -94,8 +107,33 @@ export default function SubscriptionPage() {
       console.error('Failed to fetch payments:', err);
       setPayments([]);
     } finally {
-      setPaymentsLoading(false);
+      if (!silent) setPaymentsLoading(false);
     }
+  };
+
+  const stopPollingStatus = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  const startPollingStatus = () => {
+    if (pollIntervalRef.current) return;
+    const now = Date.now();
+    if (now - lastPollTriggerRef.current < 30000) return; // avoid spamming
+    lastPollTriggerRef.current = now;
+    pollAttemptsRef.current = 0;
+
+    pollIntervalRef.current = setInterval(async () => {
+      pollAttemptsRef.current += 1;
+      const sub = await fetchCurrentSubscription({ silent: true });
+      await fetchPayments({ silent: true });
+      const status = getStatusLabel(sub?.status);
+      if (status === 'Active' || pollAttemptsRef.current >= 10) {
+        stopPollingStatus();
+      }
+    }, 3000);
   };
 
   useEffect(() => {
@@ -106,9 +144,51 @@ export default function SubscriptionPage() {
 
   const activeStatus = getStatusLabel(currentSubscription?.status);
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const hasReturnFlag = searchParams.has('orderCode') || searchParams.has('paymentStatus') || searchParams.has('payos');
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && activeStatus !== 'Active') {
+        startPollingStatus();
+      }
+    };
+
+    if (hasReturnFlag && activeStatus !== 'Active') {
+      startPollingStatus();
+    }
+
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      stopPollingStatus();
+    };
+  }, [location.search, activeStatus]);
+
   const sortedPlans = useMemo(() => {
     return [...plans].sort((a, b) => toNumber(a.price) - toNumber(b.price));
   }, [plans]);
+
+  const filteredPayments = useMemo(() => {
+    return payments.filter((item) => {
+      const status = getStatusLabel(item.status);
+      if (filterStatus !== 'all' && status !== filterStatus) return false;
+
+      const time = new Date(item.createdAt || item.paidAt || item.transactionDateTime).getTime();
+      if (filterFrom) {
+        const fromTs = new Date(filterFrom).getTime();
+        if (!Number.isNaN(fromTs) && time < fromTs) return false;
+      }
+      if (filterTo) {
+        const toTs = new Date(filterTo).getTime();
+        if (!Number.isNaN(toTs) && time > toTs + 24 * 60 * 60 * 1000) return false;
+      }
+      return true;
+    });
+  }, [payments, filterStatus, filterFrom, filterTo]);
 
   const handleCheckout = async (planId) => {
     if (!planId) return;
@@ -128,6 +208,7 @@ export default function SubscriptionPage() {
       window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
       fetchCurrentSubscription();
       fetchPayments();
+      startPollingStatus();
     } catch (err) {
       console.error('Create checkout failed, fallback route:', err);
       try {
@@ -141,6 +222,7 @@ export default function SubscriptionPage() {
         window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
         fetchCurrentSubscription();
         fetchPayments();
+        startPollingStatus();
       } catch (fallbackErr) {
         console.error('Fallback checkout failed:', fallbackErr);
         message.error(fallbackErr.response?.data?.message || 'Không thể tạo phiên thanh toán');
@@ -174,7 +256,7 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-black via-[#0b0b0b] to-black text-white font-sans pb-24">
       <header className="sticky top-0 z-30 bg-black/85 backdrop-blur-md border-b border-white/5">
         <div className="px-4 py-4 md:max-w-4xl md:mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -193,7 +275,7 @@ export default function SubscriptionPage() {
       </header>
 
       <main className="px-4 py-5 md:max-w-4xl md:mx-auto space-y-6">
-        <section className="p-4 rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-500/12 via-neutral-900 to-neutral-950">
+        <section className="p-4 rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-500/12 via-neutral-900 to-neutral-950 shadow-[0_20px_80px_-60px_rgba(190,242,100,0.5)]">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -214,7 +296,7 @@ export default function SubscriptionPage() {
           </div>
         </section>
 
-        <section className="p-4 rounded-2xl bg-[#111] border border-white/10 space-y-3">
+        <section className="p-4 rounded-2xl bg-[#0f0f0f] border border-white/10 space-y-3 shadow-[0_20px_80px_-70px_rgba(255,255,255,0.25)]">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2">
               <BadgeCheck size={18} className="text-lime-300" />
@@ -226,7 +308,7 @@ export default function SubscriptionPage() {
           {!currentSubscription ? (
             <p className="text-sm text-zinc-500">Bạn chưa có gói active.</p>
           ) : (
-            <div className="rounded-xl border border-white/10 bg-black/30 p-3 space-y-2">
+            <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-black to-black p-4 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-white">
                   {currentSubscription.planName || currentSubscription.name || 'Subscription'}
@@ -237,11 +319,10 @@ export default function SubscriptionPage() {
                   {activeStatus}
                 </span>
               </div>
-              <div className="text-xs text-zinc-400 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <p>Giá: {formatCurrency(currentSubscription.price)}</p>
-                <p>Bắt đầu: {formatDateTime(currentSubscription.startDate || currentSubscription.startedAt)}</p>
-                <p>Kết thúc: {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}</p>
-                <p>Mã: {currentSubscription.id || currentSubscription.subscriptionId || '—'}</p>
+              <div className="text-xs text-zinc-300 grid grid-cols-1 md:grid-cols-3 gap-2">
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Giá: {formatCurrency(currentSubscription.price)}</p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Bắt đầu: {formatDateTime(currentSubscription.startDate || currentSubscription.startedAt)}</p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Kết thúc: {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}</p>
               </div>
               {activeStatus === 'Active' && (
                 <button
@@ -280,8 +361,8 @@ export default function SubscriptionPage() {
                 const planId = plan.id || plan.planId;
                 const isLoading = checkoutLoadingId === planId;
                 return (
-                  <div key={planId} className="rounded-2xl p-[1px] bg-gradient-to-b from-lime-400/40 to-white/5">
-                    <div className="h-full rounded-2xl bg-[#111] p-4 flex flex-col gap-3">
+                  <div key={planId} className="rounded-2xl p-[1px] bg-gradient-to-b from-lime-400/40 to-white/10 shadow-[0_10px_60px_-50px_rgba(190,242,100,0.6)]">
+                    <div className="h-full rounded-2xl bg-[#0f0f0f] p-4 flex flex-col gap-3 border border-white/5">
                       <div>
                         <h4 className="text-base font-bold text-white">{plan.name || 'Premium Plan'}</h4>
                         <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{plan.description || 'Gói nâng cấp premium dành cho bạn.'}</p>
@@ -292,23 +373,31 @@ export default function SubscriptionPage() {
                         <p className="text-xs text-zinc-400">{toNumber(plan.durationDays, 0)} ngày</p>
                       </div>
 
-                      <button
-                        onClick={() => handleCheckout(planId)}
-                        disabled={isLoading}
-                        className="mt-auto w-full rounded-xl bg-lime-400 text-black font-bold py-2.5 text-sm hover:bg-lime-300 transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            Đang tạo thanh toán
-                          </>
-                        ) : (
-                          <>
-                            Thanh toán ngay
-                            <ExternalLink size={14} />
-                          </>
-                        )}
-                      </button>
+                      <div className="flex gap-2 mt-auto">
+                        <button
+                          onClick={() => navigate(`/customer/subscriptions/${planId}`)}
+                          className="w-1/2 rounded-xl border border-white/10 text-zinc-200 font-semibold py-2.5 text-sm hover:bg-white/5 transition-all"
+                        >
+                          Xem chi tiết
+                        </button>
+                        <button
+                          onClick={() => handleCheckout(planId)}
+                          disabled={isLoading}
+                          className="w-1/2 rounded-xl bg-lime-400 text-black font-bold py-2.5 text-sm hover:bg-lime-300 transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" />
+                              Đang tạo thanh toán
+                            </>
+                          ) : (
+                            <>
+                              Thanh toán ngay
+                              <ExternalLink size={14} />
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -317,7 +406,7 @@ export default function SubscriptionPage() {
           )}
         </section>
 
-        <section className="p-4 rounded-2xl bg-[#111] border border-white/10 space-y-3">
+        <section className="p-4 rounded-2xl bg-[#0f0f0f] border border-white/10 space-y-3 shadow-[0_20px_80px_-70px_rgba(255,255,255,0.25)]">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2">
               <History size={18} className="text-lime-300" />
@@ -326,17 +415,63 @@ export default function SubscriptionPage() {
             {paymentsLoading && <Loader2 size={16} className="animate-spin text-zinc-500" />}
           </div>
 
+          <div className="flex flex-col md:flex-row md:items-center gap-2 text-sm bg-white/5 border border-white/10 rounded-xl p-3">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <label className="text-zinc-400">Trạng thái</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none"
+              >
+                <option value="all">Tất cả</option>
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+                <option value="Canceled">Canceled</option>
+                <option value="Expired">Expired</option>
+                <option value="Failed">Failed</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-zinc-400">Từ</label>
+              <input
+                type="date"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+                className="bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-zinc-400">Đến</label>
+              <input
+                type="date"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+                className="bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => {
+                setFilterStatus('all');
+                setFilterFrom('');
+                setFilterTo('');
+              }}
+              className="text-xs px-3 py-2 rounded-lg border border-white/10 text-zinc-300 hover:bg-white/10 transition"
+            >
+              Xóa bộ lọc
+            </button>
+          </div>
+
           {paymentsLoading ? (
             <div className="py-6 flex justify-center">
               <Loader2 size={20} className="animate-spin text-lime-300" />
             </div>
-          ) : payments.length === 0 ? (
+          ) : filteredPayments.length === 0 ? (
             <p className="text-sm text-zinc-500">Chưa có giao dịch nào.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-white/10">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
-                  <tr className="text-left text-zinc-500 border-b border-white/10">
+                  <tr className="text-left text-zinc-500 border-b border-white/10 bg-white/5">
                     <th className="py-2 pr-3 font-medium">Mã giao dịch</th>
                     <th className="py-2 pr-3 font-medium">Số tiền</th>
                     <th className="py-2 pr-3 font-medium">Trạng thái</th>
@@ -344,10 +479,10 @@ export default function SubscriptionPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((item) => {
+                  {filteredPayments.map((item) => {
                     const status = getStatusLabel(item.status);
                     return (
-                      <tr key={item.id || item.paymentId || item.orderCode} className="border-b border-white/5 text-zinc-300">
+                      <tr key={item.id || item.paymentId || item.orderCode} className="border-b border-white/5 text-zinc-300 hover:bg-white/5 transition-colors">
                         <td className="py-2 pr-3">{item.orderCode || item.id || item.paymentId || '—'}</td>
                         <td className="py-2 pr-3">{formatCurrency(item.amount)}</td>
                         <td className="py-2 pr-3">

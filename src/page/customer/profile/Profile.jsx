@@ -3,10 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, UserCircle, KeyRound, PencilLine } from 'lucide-react';
 import { message } from 'antd';
 import userApi from '../../../api/userApi';
+import authApi from '../../../api/authApi';
 import analyticsApi from '../../../api/analyticsApi';
 import routineApi from '../../../api/routineApi';
 import mediaApi from '../../../api/mediaApi';
-import { Activity, Flame, Target, Trophy, Settings, LayoutDashboard, Crown, Archive, Clock3, Eye } from 'lucide-react';
+import { Activity, Flame, Target, Trophy, Settings, LayoutDashboard, Crown, Archive, Clock3, Eye, LogOut } from 'lucide-react';
+import { clearAllAuth, getRefreshToken } from '../../../utils/tokenService';
 import Heatmap from '../../../components/Heatmap';
 import UserHeader from '../../../components/UserHeader';
 
@@ -35,12 +37,13 @@ function Profile() {
   const [routines, setRoutines] = useState([]);
   const [routinesLoading, setRoutinesLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const res = userId ? await userApi.getById(userId) : await userApi.getMe();
+        const res = userId ? await userApi.getPublicProfile(userId) : await userApi.getMe();
         const data = res.data?.data || res.data;
         
         // Detect if it's actually me even if visited via ID
@@ -299,6 +302,25 @@ function Profile() {
       message.error(err.response?.data?.message || 'Đổi mật khẩu thất bại');
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      setLogoutLoading(true);
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        try {
+          await authApi.logout({ refreshToken });
+        } catch (err) {
+          console.warn('Logout API failed, fallback clear local auth:', err);
+        }
+      }
+      clearAllAuth();
+      message.success('Đã đăng xuất');
+      navigate('/', { replace: true });
+    } finally {
+      setLogoutLoading(false);
     }
   };
 
@@ -638,6 +660,24 @@ function Profile() {
               {changingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
             </button>
           </form>
+
+          <div className="lg:col-span-2 rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-red-300">Đăng xuất tài khoản</h3>
+                <p className="text-xs text-neutral-400 mt-1">Thoát phiên hiện tại và quay về màn hình đăng nhập.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={logoutLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 disabled:opacity-70"
+              >
+                <LogOut size={16} />
+                {logoutLoading ? 'Đang đăng xuất...' : 'Logout'}
+              </button>
+            </div>
+          </div>
           </div>
         )}
       </div>

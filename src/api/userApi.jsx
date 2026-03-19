@@ -9,10 +9,15 @@ const userApi = {
   getById: (id) => axiosClient.get(`/api/Users/${id}`),
   // Profile của mình
   getMe: () => axiosClient.get('/api/Users/me'),
+  // Public profile người khác
+  getPublicProfile: (id) => axiosClient.get(`/api/users/${id}/profile`),
   // Cập nhật profile
   updateMe: (data) => axiosClient.patch('/api/Users/me', data),
   // Đổi mật khẩu
   changePassword: (data) => axiosClient.patch('/api/Users/me/password', data),
+
+  // Search public users by keyword (name/email)
+  searchPublic: (params) => axiosClient.get('/api/users/search', { params }),
 
   // Follow / Unfollow
   follow: (id) => axiosClient.post(`/api/Users/${id}/follow`),

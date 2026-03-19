@@ -10,13 +10,12 @@ import SelfRoutinePage from './page/customer/selfrRoutin/SelfRoutinePage';
 import CreateRoutinePage from './page/customer/selfrRoutin/CreateRoutinePage';
 import RoutineDetailPage from './page/customer/selfrRoutin/RoutineDetailPage';
 import WorkoutPage from './page/customer/selfrRoutin/workout/WorkoutPage';
-import MyFeedsPage from './page/customer/myfeeds/MyFeedsPage';
-import MyFeedsSavedPage from './page/customer/myfeeds/saved/MyFeedsSavedPage';
-import MyFeedsGridPage from './page/customer/myfeeds/grid/MyFeedsGridPage';
 import Profile from './page/customer/profile/Profile';
 import MessagePage from './page/customer/message/MessagePage';
 import ChatDetail from './page/customer/message/ChatDetail';
 import SubscriptionPage from './page/customer/subscription/SubscriptionPage';
+import PlanDetailPage from './page/customer/subscription/PlanDetailPage';
+import UserSearchPage from './page/customer/user/UserSearchPage';
 function App() {
   return (
     <Routes>
@@ -30,12 +29,11 @@ function App() {
       <Route path="/customer/selfroutin/:id" element={<RoutineDetailPage />} />
       <Route path="/customer/selfroutin/create" element={<CreateRoutinePage />} />
       <Route path="/customer/selfroutin/workout" element={<WorkoutPage />} />
-      <Route path="/customer/myfeeds" element={<MyFeedsPage />} />
-      <Route path="/customer/myfeeds/saved" element={<MyFeedsSavedPage />} />
-      <Route path="/customer/myfeeds/grid" element={<MyFeedsGridPage />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/profile/:userId" element={<Profile />} />
+      <Route path="/customer/users/search" element={<UserSearchPage />} />
       <Route path="/customer/subscriptions" element={<SubscriptionPage />} />
+      <Route path="/customer/subscriptions/:planId" element={<PlanDetailPage />} />
       <Route path="/customer/message" element={<MessagePage />} />
       <Route path="/customer/message/:id" element={<ChatDetail />} />
     </Routes>
