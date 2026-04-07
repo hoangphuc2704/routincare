@@ -1,16 +1,40 @@
-# React + Vite
+# RoutinCare FE
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend project cho RoutinCare, su dung React + Vite.
 
-Currently, two official plugins are available:
+## Run project
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Yeu cau:
+- Node.js 18+
+- npm 9+
 
-## React Compiler
+Lenh chay:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Build production:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run build
+npm run preview
+```
+
+Lint:
+
+```bash
+npm run lint
+```
+
+## API docs
+
+- Backend REST specification: [docs/Api Specification](docs/Api%20Specification)
+- FE request/response contract: [docs/FE_API_REQUEST_RESPONSE.md](docs/FE_API_REQUEST_RESPONSE.md)
+- FE connected vs backend coverage matrix: [docs/FE_BACKEND_API_COVERAGE.md](docs/FE_BACKEND_API_COVERAGE.md)
+
+## Update moi trong tai lieu
+
+- Da bo sung tai lieu doi chieu endpoint FE da noi voi backend specification.
+- Tai lieu moi giup nhin nhanh endpoint nao da co wrapper o FE, endpoint nao chua co, va endpoint nao can chuan hoa route.
