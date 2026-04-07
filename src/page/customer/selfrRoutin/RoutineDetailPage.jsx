@@ -17,6 +17,7 @@ const RoutineDetailPage = () => {
     const iconOptions = ['droplet', 'check', 'flame', 'activity', 'sun', 'moon'];
     const colorOptions = ['#22C55E', '#F97316', '#EF4444'];
     const prepareCategoryOptions = ['Equipment', 'Accessory', 'Food', 'Other'];
+    const categoryMap = { Equipment: 0, Accessory: 1, Food: 2, Other: 3 };
     const [logs, setLogs] = useState([]);
     const [logLoading, setLogLoading] = useState(false);
     const [logInputs, setLogInputs] = useState({});
@@ -178,7 +179,7 @@ const RoutineDetailPage = () => {
                 imageUrl: null,
                 purchaseUrl: newPrepare.purchaseUrl?.trim() || null,
                 iconName: newPrepare.iconName || 'package',
-                category: newPrepare.category || 'Equipment',
+                category: categoryMap[newPrepare.category] ?? 0,
                 isRequired: !!newPrepare.isRequired,
                 orderIndex: prepareItems.length,
             };
@@ -238,7 +239,7 @@ const RoutineDetailPage = () => {
                 imageUrl: null,
                 purchaseUrl: draft.purchaseUrl?.trim() || null,
                 iconName: draft.iconName || 'package',
-                category: draft.category || 'Equipment',
+                category: categoryMap[draft.category] ?? 0,
                 isRequired: !!draft.isRequired,
                 orderIndex: (tasks.find((t) => (t.id || t.taskId) === taskId)?.prepareItems?.length) || 0,
             };
@@ -275,7 +276,7 @@ const RoutineDetailPage = () => {
                 imageUrl: null,
                 purchaseUrl: draft.purchaseUrl?.trim() || null,
                 iconName: draft.iconName || 'package',
-                category: draft.category || 'Equipment',
+                category: categoryMap[draft.category] ?? 0,
                 isRequired: !!draft.isRequired,
                 orderIndex: draft.orderIndex ?? 0,
             };
@@ -588,7 +589,7 @@ const RoutineDetailPage = () => {
                                         onChange={(e) => setEditForm({ ...editForm, remindTime: e.target.value })}
                                         className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                                     />
-   
+
                                     <button
                                         onClick={handleUpdateRoutine}
                                         disabled={savingUpdate}

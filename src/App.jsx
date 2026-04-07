@@ -16,6 +16,24 @@ import ChatDetail from './page/customer/message/ChatDetail';
 import SubscriptionPage from './page/customer/subscription/SubscriptionPage';
 import PlanDetailPage from './page/customer/subscription/PlanDetailPage';
 import UserSearchPage from './page/customer/user/UserSearchPage';
+import AdminLayout from './components/admin/AdminLayout';
+import Dashboard from './page/admin/Dashboard';
+import CategoryList from './page/admin/categories/CategoryList';
+import UserList from './page/admin/users/UserList';
+
+// Protected Route component for admin pages
+function ProtectedAdminRoute({ element }) {
+  const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+  const isAdmin =
+    user?.roleName?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'admin';
+
+  if (!isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return element;
+}
+
 function App() {
   return (
     <Routes>
@@ -24,7 +42,6 @@ function App() {
       <Route path="/signup" element={<SignUp />} />
       <Route path="/home" element={<Homepage />} />
       <Route path="/notification" element={<NotificationPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
       <Route path="/customer/selfroutin" element={<SelfRoutinePage />} />
       <Route path="/customer/selfroutin/:id" element={<RoutineDetailPage />} />
       <Route path="/customer/selfroutin/create" element={<CreateRoutinePage />} />
@@ -36,6 +53,16 @@ function App() {
       <Route path="/customer/subscriptions/:planId" element={<PlanDetailPage />} />
       <Route path="/customer/message" element={<MessagePage />} />
       <Route path="/customer/message/:id" element={<ChatDetail />} />
+
+      {/* Admin Routes */}
+      <Route path="/admin" element={<ProtectedAdminRoute element={<AdminLayout />} />}>
+        <Route index element={<Dashboard />} />
+        <Route path="categories" element={<CategoryList />} />
+        <Route path="users" element={<UserList />} />
+      </Route>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
