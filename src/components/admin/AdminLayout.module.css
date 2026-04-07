@@ -1,0 +1,181 @@
+/* 
+  Admin Root Isolation
+  Resets global #root constraints that center customer UI
+  Ensures admin dashboard is full-screen without max-width
+*/
+
+.admin {
+  /* Force full screen - override global #root constraints */
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  display: flex !important;
+  flex-direction: row !important;
+  box-sizing: border-box !important;
+
+  /* Reset any global text-align that affects layout */
+  text-align: left !important;
+
+  /* Dark admin theme */
+  background-color: #000 !important;
+  color: #fff !important;
+  overflow: hidden !important;
+
+  /* Override Tailwind & global defaults */
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+.admin * {
+  /* Prevent any global CSS from affecting admin components */
+  box-sizing: border-box !important;
+  text-align: left !important;
+}
+
+.admin input,
+.admin textarea,
+.admin select,
+.admin button {
+  /* Reset form elements affected by global styles */
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+/* Sidebar container */
+.sidebar {
+  width: 16rem !important; /* 240px */
+  height: 100% !important;
+  background-color: #171717 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  text-align: left !important;
+}
+
+/* Main content area */
+.main {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background-color: #000 !important;
+  width: 100% !important;
+  text-align: left !important;
+}
+
+/* Header */
+.header {
+  height: auto !important;
+  background-color: #171717 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 1rem 1.5rem !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  text-align: left !important;
+}
+
+/* Page content area - scrollable */
+.content {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 1.5rem !important;
+  background-color: #000 !important;
+  width: 100% !important;
+  text-align: left !important;
+}
+
+/* Customize scrollbar for better appearance */
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 4px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Force desktop layout - no responsive shrinking */
+.admin {
+  font-size: 18px;
+  line-height: 145%;
+}
+
+.admin h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  line-height: 120%;
+}
+
+.admin h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+}
+
+.admin h3 {
+  font-size: 20px;
+}
+
+/* Prevent ALL responsive media queries from affecting admin */
+@media (max-width: 1024px) {
+  .admin {
+    font-size: 18px;
+  }
+
+  .admin h1 {
+    font-size: 56px;
+    margin: 32px 0;
+  }
+
+  .admin h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin {
+    font-size: 18px;
+  }
+
+  .admin h1 {
+    font-size: 56px;
+  }
+
+  .admin h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin {
+    font-size: 18px;
+  }
+
+  .admin h1 {
+    font-size: 56px;
+  }
+
+  .admin h2 {
+    font-size: 24px;
+  }
+}

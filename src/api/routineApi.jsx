@@ -10,6 +10,11 @@ const routineApi = {
   delete: (id) => axiosClient.delete(`/api/Routines/${id}`),
   copy: (id) => axiosClient.post(`/api/Routines/${id}/copy`),
 
+  // Search public routines
+  searchPublic: (params) => axiosClient.get('/api/Routines/search', { params }),
+  // Public routines of a specific user
+  getPublicByUser: (userId) => axiosClient.get(`/api/Routines/user/${userId}`),
+
   // Tasks in Routine
   addTask: (routineId, data) => axiosClient.post(`/api/Routines/${routineId}/tasks`, data),
   updateTask: (routineId, taskId, data) =>

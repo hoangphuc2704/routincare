@@ -71,6 +71,7 @@ export default function UserHeader({ user: propUser, isMe }) {
     const [friendRequestId, setFriendRequestId] = useState(null);
     const [friendLoading, setFriendLoading] = useState(false);
     const [followersCountState, setFollowersCountState] = useState(0);
+    const [followingCountState, setFollowingCountState] = useState(0);
 
     const refreshFollowSnapshot = async (targetId) => {
         if (!targetId) return;
@@ -97,10 +98,17 @@ export default function UserHeader({ user: propUser, isMe }) {
             }
         }
 
-        const followersRes = await userApi.getFollowers(targetId);
+        const [followersRes, followingRes] = await Promise.all([
+            userApi.getFollowers(targetId),
+            userApi.getFollowing(targetId),
+        ]);
         const followersPayload = followersRes.data?.data || followersRes.data || [];
         const followersList = getListData(followersPayload);
         setFollowersCountState(followersList.length);
+
+        const followingPayload = followingRes.data?.data || followingRes.data || [];
+        const followingList = getListData(followingPayload);
+        setFollowingCountState(followingList.length);
 
         if (myId) {
             const followed = followersList.some((item) => getRelationIds(item).some((id) => sameId(id, myId)));
@@ -125,6 +133,27 @@ export default function UserHeader({ user: propUser, isMe }) {
             setIsFollowing(getFollowState(propUser));
         }
     }, [propUser, isMe]);
+
+    // Fetch follower/following counts for own profile
+    useEffect(() => {
+        if (!isMe) return;
+        const fetchMyCounts = async () => {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                let myId = currentUser?.userId || currentUser?.id;
+                if (!myId) {
+                    const meRes = await userApi.getMe();
+                    const meData = meRes.data?.data || meRes.data || {};
+                    myId = meData.userId || meData.id;
+                }
+                if (!myId) return;
+                await refreshFollowSnapshot(myId);
+            } catch (err) {
+                console.error('Failed to fetch my follow counts:', err);
+            }
+        };
+        fetchMyCounts();
+    }, [isMe, propUser]);
 
     useEffect(() => {
         const loadRelations = async () => {
@@ -184,8 +213,12 @@ export default function UserHeader({ user: propUser, isMe }) {
     const followingCount = getCountValue(user, ['followingCount', 'following', 'totalFollowing', 'total_following']);
 
     useEffect(() => {
-        setFollowersCountState(followersCount);
+        if (followersCount > 0) setFollowersCountState(followersCount);
     }, [followersCount]);
+
+    useEffect(() => {
+        if (followingCount > 0) setFollowingCountState(followingCount);
+    }, [followingCount]);
 
     const handleFollow = async () => {
         if (isMe) return;
@@ -339,7 +372,7 @@ export default function UserHeader({ user: propUser, isMe }) {
                     <div className="flex justify-center md:justify-start gap-8 py-2 border-y border-white/5">
                         <Stat label="Routines" value={routineCount} />
                         <Stat label="Followers" value={followersCountState} />
-                        <Stat label="Following" value={followingCount} />
+                        <Stat label="Following" value={followingCountState} />
                     </div>
 
                     <p className="text-sm text-zinc-400 leading-relaxed max-w-sm mx-auto md:mx-0">
