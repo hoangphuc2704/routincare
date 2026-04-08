@@ -5,6 +5,7 @@ import { message } from 'antd';
 import BottomNav from '../../../components/BottomNav';
 import subscriptionApi from '../../../api/subscriptionApi';
 import paymentApi from '../../../api/paymentApi';
+import { getUser, setUser } from '../../../utils/tokenService';
 
 const STATUS_LABELS = {
   0: 'Pending',
@@ -57,6 +58,7 @@ export default function SubscriptionPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
+  const [isVerifyingReturn, setIsVerifyingReturn] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -131,6 +133,12 @@ export default function SubscriptionPage() {
       await fetchPayments({ silent: true });
       const status = getStatusLabel(sub?.status);
       if (status === 'Active' || pollAttemptsRef.current >= 10) {
+        if (status === 'Active') {
+          const currentUser = getUser() || {};
+          if (!currentUser.IsPremium) {
+            setUser({ ...currentUser, IsPremium: true });
+          }
+        }
         stopPollingStatus();
       }
     }, 3000);
@@ -145,8 +153,89 @@ export default function SubscriptionPage() {
   const activeStatus = getStatusLabel(currentSubscription?.status);
 
   useEffect(() => {
+    if (activeStatus === 'Active') {
+      const currentUser = getUser() || {};
+      if (!currentUser.IsPremium) {
+        setUser({ ...currentUser, IsPremium: true });
+      }
+    }
+  }, [activeStatus]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifyPaymentReturn = async () => {
+      const searchParams = new URLSearchParams(location.search);
+      const cancel = searchParams.get('cancel');
+      const orderCodeFromQuery = searchParams.get('orderCode');
+      const pendingOrderCode = localStorage.getItem('pendingOrderCode');
+      const orderCode = orderCodeFromQuery || pendingOrderCode || '';
+      const isSuccessPath = location.pathname === '/payment/success' || location.pathname === '/payments/return';
+      const isCancelPath = location.pathname === '/payment/cancel';
+
+      if (cancel === 'true' || isCancelPath) {
+        localStorage.removeItem('pendingOrderCode');
+        message.warning('Thanh toán đã bị hủy');
+        navigate('/customer/subscriptions', { replace: true });
+        return;
+      }
+
+      if (!orderCode) {
+        if (isSuccessPath) {
+          message.error('Không tìm thấy mã giao dịch để xác minh thanh toán');
+          navigate('/customer/subscriptions', { replace: true });
+        }
+        return;
+      }
+
+      const status = searchParams.get('status') || '';
+      const code = searchParams.get('code') || '';
+
+      setIsVerifyingReturn(true);
+      try {
+        const query = { orderCode, status, code };
+        if (cancel) query.cancel = cancel;
+
+        const res = await paymentApi.verifyReturn(query);
+        const result = res.data;
+        const success = Boolean(result?.success ?? true);
+
+        if (!success) {
+          throw new Error(result?.error?.message || result?.message || 'Xác minh thanh toán thất bại');
+        }
+
+        const currentUser = getUser() || {};
+        setUser({ ...currentUser, IsPremium: true });
+        localStorage.removeItem('pendingOrderCode');
+
+        await fetchCurrentSubscription({ silent: true });
+        await fetchPayments({ silent: true });
+        stopPollingStatus();
+
+        message.success('Thanh toán thành công, Premium đã được kích hoạt');
+      } catch (err) {
+        console.error('Failed to verify payment return:', err);
+        message.error(err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Xác minh thanh toán thất bại, đang thử đồng bộ từ webhook');
+        startPollingStatus();
+      } finally {
+        if (!cancelled) {
+          setIsVerifyingReturn(false);
+          navigate('/customer/subscriptions', { replace: true });
+        }
+      }
+    };
+
+    verifyPaymentReturn();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.search, location.pathname, navigate]);
+
+  useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const hasReturnFlag = searchParams.has('orderCode') || searchParams.has('paymentStatus') || searchParams.has('payos');
+    const isSuccessPath = location.pathname === '/payment/success' || location.pathname === '/payments/return';
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && activeStatus !== 'Active') {
@@ -154,7 +243,7 @@ export default function SubscriptionPage() {
       }
     };
 
-    if (hasReturnFlag && activeStatus !== 'Active') {
+    if ((hasReturnFlag || isSuccessPath) && activeStatus !== 'Active') {
       startPollingStatus();
     }
 
@@ -166,7 +255,7 @@ export default function SubscriptionPage() {
       document.removeEventListener('visibilitychange', handleVisibility);
       stopPollingStatus();
     };
-  }, [location.search, activeStatus]);
+  }, [location.search, location.pathname, activeStatus]);
 
   const sortedPlans = useMemo(() => {
     return [...plans].sort((a, b) => toNumber(a.price) - toNumber(b.price));
@@ -199,13 +288,18 @@ export default function SubscriptionPage() {
       const res = await subscriptionApi.create({ planId });
       const payload = res.data?.data || res.data || {};
       const checkoutUrl = payload.checkoutUrl || payload.paymentUrl || payload.payment_url;
+      const orderCode = payload.orderCode;
 
       if (!checkoutUrl) {
         throw new Error('Checkout URL not returned');
       }
 
+      if (orderCode) {
+        localStorage.setItem('pendingOrderCode', String(orderCode));
+      }
+
       message.success('Đang chuyển tới trang thanh toán');
-      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+      globalThis.location.href = checkoutUrl;
       fetchCurrentSubscription();
       fetchPayments();
       startPollingStatus();
@@ -215,11 +309,16 @@ export default function SubscriptionPage() {
         const fallbackRes = await subscriptionApi.checkout(planId);
         const fallbackPayload = fallbackRes.data?.data || fallbackRes.data || {};
         const checkoutUrl = fallbackPayload.checkoutUrl || fallbackPayload.paymentUrl || fallbackPayload.payment_url;
+        const orderCode = fallbackPayload.orderCode;
 
         if (!checkoutUrl) throw new Error('Fallback checkout URL not returned');
 
+        if (orderCode) {
+          localStorage.setItem('pendingOrderCode', String(orderCode));
+        }
+
         message.success('Đang chuyển tới trang thanh toán');
-        window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        globalThis.location.href = checkoutUrl;
         fetchCurrentSubscription();
         fetchPayments();
         startPollingStatus();
@@ -239,7 +338,7 @@ export default function SubscriptionPage() {
       return;
     }
 
-    if (!window.confirm('Bạn chắc chắn muốn hủy gói hiện tại?')) return;
+    if (!globalThis.confirm('Bạn chắc chắn muốn hủy gói hiện tại?')) return;
 
     try {
       setCancelLoading(true);
@@ -275,6 +374,13 @@ export default function SubscriptionPage() {
       </header>
 
       <main className="px-4 py-5 md:max-w-4xl md:mx-auto space-y-6">
+        {isVerifyingReturn && (
+          <section className="p-3 rounded-xl border border-lime-400/30 bg-lime-400/10 text-sm text-lime-200 inline-flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin" />
+            Đang xác minh kết quả thanh toán...
+          </section>
+        )}
+
         <section className="p-4 rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-500/12 via-neutral-900 to-neutral-950 shadow-[0_20px_80px_-60px_rgba(190,242,100,0.5)]">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
