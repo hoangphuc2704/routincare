@@ -47,18 +47,30 @@ export default function PlanDetailPage() {
       const res = await subscriptionApi.create({ planId });
       const payload = res.data?.data || res.data || {};
       const checkoutUrl = payload.checkoutUrl || payload.paymentUrl || payload.payment_url;
+      const orderCode = payload.orderCode;
       if (!checkoutUrl) throw new Error('Checkout URL not returned');
+
+      if (orderCode) {
+        localStorage.setItem('pendingOrderCode', String(orderCode));
+      }
+
       message.success('Đang chuyển tới trang thanh toán');
-      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+      globalThis.location.href = checkoutUrl;
     } catch (err) {
       console.error('Create checkout failed, fallback route:', err);
       try {
         const fallbackRes = await subscriptionApi.checkout(planId);
         const fallbackPayload = fallbackRes.data?.data || fallbackRes.data || {};
         const checkoutUrl = fallbackPayload.checkoutUrl || fallbackPayload.paymentUrl || fallbackPayload.payment_url;
+        const orderCode = fallbackPayload.orderCode;
         if (!checkoutUrl) throw new Error('Fallback checkout URL not returned');
+
+        if (orderCode) {
+          localStorage.setItem('pendingOrderCode', String(orderCode));
+        }
+
         message.success('Đang chuyển tới trang thanh toán');
-        window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        globalThis.location.href = checkoutUrl;
       } catch (fallbackErr) {
         console.error('Fallback checkout failed:', fallbackErr);
         message.error(fallbackErr.response?.data?.message || 'Không thể tạo phiên thanh toán');

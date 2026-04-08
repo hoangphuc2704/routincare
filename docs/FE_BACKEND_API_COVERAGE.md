@@ -180,7 +180,7 @@ FE da noi:
 Backend implemented:
 - Subscription plans: GET/GET:id/POST/PATCH/DELETE `/subscription-plans`
 - Subscriptions: POST `/subscriptions`, POST `/subscriptions/checkout/:planId`, GET `/subscriptions/me`, POST `/subscriptions/:id/cancel`, GET `/subscriptions`
-- Payment: GET `/payments/me`, GET `/payments`
+- Payment: GET `/payments/me`, GET `/payments`, GET `/payments/return`
 - Webhook: POST `/subscriptions/webhook/payos`
 
 Backend pending:
@@ -201,6 +201,7 @@ FE da noi:
 - GET `/api/subscriptions`
 - GET `/api/payments/me`
 - GET `/api/payments`
+- GET `/api/payments/return`
 
 Chua co FE wrapper (thuong la backend-to-backend):
 - POST `/subscriptions/webhook/payos`

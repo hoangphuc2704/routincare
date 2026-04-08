@@ -174,6 +174,7 @@ POST /task-logs/checkin { task_id }
 | POST   | `/subscriptions/webhook/payos`      | [-]    | Webhook PayOS                                          | ✅      |
 | GET    | `/payments/me`                      | [*]    | Lịch sử thanh toán của user                            | ✅      |
 | GET    | `/payments`                         | [A]    | Tất cả lịch sử thanh toán (admin)                      | ✅      |
+| GET    | `/payments/return`                  | [*]    | Verify return-flow từ PayOS và kích hoạt subscription  | ✅      |
 
 ### 6.2 Pending
 
@@ -192,9 +193,13 @@ POST /task-logs/checkin { task_id }
           → tạo Transaction (Pending)
           → trả về { payment_url }
 3. User redirect → PayOS checkout
-4. POST /subscriptions/webhook/payos      → PayOS callback
-          → cập nhật Transaction → Success
-          → cập nhật UserSubscription → Active
+4. PayOS redirect → FE route /payment/success (hoac /payment/cancel)
+5. FE goi GET /payments/return?orderCode=...&status=PAID&code=00
+          → backend verify sync return-flow
+          → cập nhật Transaction/UserSubscription nếu hợp lệ
+6. POST /subscriptions/webhook/payos      → PayOS callback (async backup)
+          → nếu return-flow chưa thành công thì webhook vẫn activate được
+7. FE poll GET /subscriptions/me để đồng bộ trạng thái Active
           → mở khóa Premium features (Reels upload, AI suggestions)
 ```
 

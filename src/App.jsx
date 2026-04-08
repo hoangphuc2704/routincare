@@ -51,6 +51,9 @@ function App() {
       <Route path="/customer/users/search" element={<UserSearchPage />} />
       <Route path="/customer/subscriptions" element={<SubscriptionPage />} />
       <Route path="/customer/subscriptions/:planId" element={<PlanDetailPage />} />
+      <Route path="/payment/success" element={<SubscriptionPage />} />
+      <Route path="/payment/cancel" element={<SubscriptionPage />} />
+      <Route path="/payments/return" element={<SubscriptionPage />} />
       <Route path="/customer/message" element={<MessagePage />} />
       <Route path="/customer/message/:id" element={<ChatDetail />} />
 
