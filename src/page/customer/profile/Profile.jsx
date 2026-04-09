@@ -7,7 +7,19 @@ import authApi from '../../../api/authApi';
 import analyticsApi from '../../../api/analyticsApi';
 import routineApi from '../../../api/routineApi';
 import mediaApi from '../../../api/mediaApi';
-import { Activity, Flame, Target, Trophy, Settings, LayoutDashboard, Crown, Archive, Clock3, Eye, LogOut } from 'lucide-react';
+import {
+  Activity,
+  Flame,
+  Target,
+  Trophy,
+  Settings,
+  LayoutDashboard,
+  Crown,
+  Archive,
+  Clock3,
+  Eye,
+  LogOut,
+} from 'lucide-react';
 import { clearAllAuth, getRefreshToken } from '../../../utils/tokenService';
 import Heatmap from '../../../components/Heatmap';
 import UserHeader from '../../../components/UserHeader';
@@ -45,15 +57,15 @@ function Profile() {
         setLoading(true);
         const res = userId ? await userApi.getPublicProfile(userId) : await userApi.getMe();
         const data = res.data?.data || res.data;
-        
+
         // Detect if it's actually me even if visited via ID
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const myId = JSON.parse(storedUser).userId;
           if (myId === (data.id || data.userId)) {
-              setIsMe(true);
+            setIsMe(true);
           } else {
-              setIsMe(!userId);
+            setIsMe(!userId);
           }
         }
 
@@ -88,11 +100,21 @@ function Profile() {
     };
 
     if (isMe) {
-        fetchAnalytics();
-        fetchHeatmap();
+      fetchAnalytics();
+      fetchHeatmap();
     }
     fetchUser();
-  }, [userId, isMe]);
+
+    // Listen for friend status changes to refresh profile
+    const handleFriendStatusChange = () => {
+      if (!isMe) {
+        setTimeout(() => fetchUser(), 200);
+      }
+    };
+
+    window.addEventListener('friendStatusChanged', handleFriendStatusChange);
+    return () => window.removeEventListener('friendStatusChanged', handleFriendStatusChange);
+  }, [userId, isMe, navigate]);
 
   useEffect(() => {
     const fetchRoutines = async () => {
@@ -119,9 +141,17 @@ function Profile() {
             try {
               const searchRes = await routineApi.searchPublic({ userId, pageSize: 100 });
               const searchData = searchRes.data?.data || searchRes.data;
-              const allRoutines = searchData?.items || searchData?.records || (Array.isArray(searchData) ? searchData : []);
+              const allRoutines =
+                searchData?.items ||
+                searchData?.records ||
+                (Array.isArray(searchData) ? searchData : []);
               data = allRoutines.filter((item) => {
-                const ownerId = item.userId || item.ownerId || item.createdBy || item.user?.id || item.user?.userId;
+                const ownerId =
+                  item.userId ||
+                  item.ownerId ||
+                  item.createdBy ||
+                  item.user?.id ||
+                  item.user?.userId;
                 return !ownerId || String(ownerId).toLowerCase() === String(userId).toLowerCase();
               });
             } catch (err) {
@@ -184,10 +214,7 @@ function Profile() {
   const getCompletionPercent = (overview) => {
     // Support both old and new API field names.
     const raw =
-      overview?.completionRate ??
-      overview?.completion_rate_7d ??
-      overview?.completionRate7d ??
-      0;
+      overview?.completionRate ?? overview?.completion_rate_7d ?? overview?.completionRate7d ?? 0;
     const value = toNumber(raw, 0);
     return value <= 1 ? Math.round(value * 100) : Math.round(value);
   };
@@ -241,7 +268,12 @@ function Profile() {
       const signRes = await mediaApi.signUpload({ folder: 'routin/avatar', resourceType: 'image' });
       const signData = signRes.data?.data || signRes.data;
 
-      if (!signData?.uploadUrl || !signData?.apiKey || !signData?.timestamp || !signData?.signature) {
+      if (
+        !signData?.uploadUrl ||
+        !signData?.apiKey ||
+        !signData?.timestamp ||
+        !signData?.signature
+      ) {
         throw new Error('Missing signed upload data');
       }
 
@@ -299,7 +331,7 @@ function Profile() {
         bio: profile.bio?.trim() || null,
       };
       await userApi.updateMe(payload);
-      
+
       // Update localStorage to sync with other components like BottomNav
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -377,13 +409,13 @@ function Profile() {
             </div>
             <span className="text-sm font-medium">Quay lại</span>
           </button>
-          
+
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-black text-white uppercase tracking-tighter">
-                {isMe ? "My Space" : "Member Profile"}
+              {isMe ? 'My Space' : 'Member Profile'}
             </h1>
             <p className="text-sm text-neutral-500 font-medium">
-                {isMe ? "Manage your habits and stats." : "Viewing user's routine and journey."}
+              {isMe ? 'Manage your habits and stats.' : "Viewing user's routine and journey."}
             </p>
           </div>
 
@@ -391,31 +423,31 @@ function Profile() {
 
           <div className="flex gap-2 p-1 bg-neutral-900 rounded-2xl w-fit border border-white/5">
             {isMe && (
-                <button
-                    onClick={() => setActiveTab('dashboard')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'dashboard' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
-                >
-                    <LayoutDashboard size={18} />
-                    Stats
-                </button>
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'dashboard' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
+              >
+                <LayoutDashboard size={18} />
+                Stats
+              </button>
             )}
-            
+
             <button
-                onClick={() => setActiveTab('routines')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'routines' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
+              onClick={() => setActiveTab('routines')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'routines' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
             >
-                <Archive size={18} />
-                Routines
+              <Archive size={18} />
+              Routines
             </button>
 
             {isMe && (
-                <button
-                    onClick={() => setActiveTab('settings')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'settings' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
-                >
-                    <Settings size={18} />
-                    Settings
-                </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'settings' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
+              >
+                <Settings size={18} />
+                Settings
+              </button>
             )}
           </div>
         </div>
@@ -424,61 +456,63 @@ function Profile() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Stats Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-               <StatCard 
-                 title="Routines" 
-                 value={analyticsStats.totalRoutines} 
-                 icon={<Target className="text-blue-400" size={24} />} 
-                 sub="Active"
-               />
-               <StatCard 
-                 title="Streak" 
-                 value={analyticsStats.currentStreak} 
-                 icon={<Flame className="text-orange-500" size={24} />} 
-                 sub="Days"
-               />
-               <StatCard 
-                 title="Completion" 
-                 value={`${analyticsStats.completionPercent}%`} 
-                 icon={<Activity className="text-lime-400" size={24} />} 
-                 sub="Rate"
-               />
-               <StatCard 
-                 title="Best Streak" 
-                 value={analyticsStats.longestStreak} 
-                 icon={<Trophy className="text-yellow-400" size={24} />} 
-                 sub="Record"
-               />
+              <StatCard
+                title="Routines"
+                value={analyticsStats.totalRoutines}
+                icon={<Target className="text-blue-400" size={24} />}
+                sub="Active"
+              />
+              <StatCard
+                title="Streak"
+                value={analyticsStats.currentStreak}
+                icon={<Flame className="text-orange-500" size={24} />}
+                sub="Days"
+              />
+              <StatCard
+                title="Completion"
+                value={`${analyticsStats.completionPercent}%`}
+                icon={<Activity className="text-lime-400" size={24} />}
+                sub="Rate"
+              />
+              <StatCard
+                title="Best Streak"
+                value={analyticsStats.longestStreak}
+                icon={<Trophy className="text-yellow-400" size={24} />}
+                sub="Record"
+              />
             </div>
 
             {/* Subscription Status */}
             <div className="p-4 bg-gradient-to-r from-zinc-900 to-black rounded-2xl border border-lime-400/20 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-lime-400/10 rounded-xl flex items-center justify-center">
-                        <Crown className="text-lime-400" size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-sm">Free Plan</h3>
-                        <p className="text-[10px] text-neutral-500 uppercase tracking-tighter">Your current subscription</p>
-                    </div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-lime-400/10 rounded-xl flex items-center justify-center">
+                  <Crown className="text-lime-400" size={24} />
                 </div>
-                <Link
-                  to="/customer/subscriptions"
-                  className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
-                >
-                  UPGRADE PRO
-                </Link>
+                <div>
+                  <h3 className="font-bold text-sm">Free Plan</h3>
+                  <p className="text-[10px] text-neutral-500 uppercase tracking-tighter">
+                    Your current subscription
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/customer/subscriptions"
+                className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
+              >
+                UPGRADE PRO
+              </Link>
             </div>
 
             {/* Placeholder for Heatmap */}
             <div className="p-6 bg-neutral-900 rounded-2xl border border-white/5">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-bold flex items-center gap-2">
-                        <Activity size={20} className="text-lime-400" />
-                        Activity Log
-                    </h3>
-                    <span className="text-xs text-neutral-500">Last 12 months</span>
-                </div>
-                <Heatmap data={heatmapData} />
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold flex items-center gap-2">
+                  <Activity size={20} className="text-lime-400" />
+                  Activity Log
+                </h3>
+                <span className="text-xs text-neutral-500">Last 12 months</span>
+              </div>
+              <Heatmap data={heatmapData} />
             </div>
           </div>
         )}
@@ -493,7 +527,9 @@ function Profile() {
               <div className="text-center py-16 bg-neutral-900 rounded-3xl border border-dashed border-white/10">
                 <Archive size={48} className="mx-auto text-neutral-800 mb-4" />
                 <p className="text-neutral-500 font-medium">
-                  {isMe ? 'Chưa có routine nào. Tạo mới nhé!' : 'Thành viên này chưa có routine công khai.'}
+                  {isMe
+                    ? 'Chưa có routine nào. Tạo mới nhé!'
+                    : 'Thành viên này chưa có routine công khai.'}
                 </p>
               </div>
             ) : (
@@ -506,35 +542,45 @@ function Profile() {
                 </div>
 
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
-                {routines.map((routine) => (
-                  <Link
-                    to={`/customer/selfroutin/${routine.id}`}
-                    key={routine.id}
-                    className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-gradient-to-br from-neutral-900 via-neutral-800 to-black hover:border-lime-400/60 transition-all active:scale-[0.98]"
-                  >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(163,230,53,0.22),transparent_45%)]" />
+                  {routines.map((routine) => (
+                    <Link
+                      to={`/customer/selfroutin/${routine.id}`}
+                      key={routine.id}
+                      className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-gradient-to-br from-neutral-900 via-neutral-800 to-black hover:border-lime-400/60 transition-all active:scale-[0.98]"
+                    >
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(163,230,53,0.22),transparent_45%)]" />
 
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="h-12 w-12 rounded-full border border-white/20 bg-black/30 backdrop-blur-sm flex items-center justify-center text-lime-300">
-                        <Target size={18} />
-                      </div>
-                    </div>
-
-                    <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
-                      <h3 className="text-xs font-semibold text-white truncate">{routine.title}</h3>
-                      <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-300">
-                        <span>{routine.taskCount} task</span>
-                        <span className="truncate ml-2">{repeatLabel(routine.repeatType, routine.repeatDays)}</span>
-                      </div>
-                      {isMe && (
-                        <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-400">
-                          <span className="inline-flex items-center gap-1"><Eye size={10} /> {visibilityLabel(routine.visibility)}</span>
-                          {routine.remindTime && <span className="inline-flex items-center gap-1"><Clock3 size={10} /> {routine.remindTime}</span>}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-full border border-white/20 bg-black/30 backdrop-blur-sm flex items-center justify-center text-lime-300">
+                          <Target size={18} />
                         </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
+                      </div>
+
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
+                        <h3 className="text-xs font-semibold text-white truncate">
+                          {routine.title}
+                        </h3>
+                        <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-300">
+                          <span>{routine.taskCount} task</span>
+                          <span className="truncate ml-2">
+                            {repeatLabel(routine.repeatType, routine.repeatDays)}
+                          </span>
+                        </div>
+                        {isMe && (
+                          <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-400">
+                            <span className="inline-flex items-center gap-1">
+                              <Eye size={10} /> {visibilityLabel(routine.visibility)}
+                            </span>
+                            {routine.remindTime && (
+                              <span className="inline-flex items-center gap-1">
+                                <Clock3 size={10} /> {routine.remindTime}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               </div>
             )}
@@ -543,180 +589,196 @@ function Profile() {
 
         {activeTab === 'settings' && isMe && (
           <div className="grid gap-6 lg:grid-cols-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <form
-            onSubmit={handleUpdateProfile}
-            className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold flex items-center gap-2"><PencilLine size={18} /> Thông tin cá nhân</h2>
-              {loading && <span className="text-xs text-neutral-400">Đang tải...</span>}
-            </div>
+            <form
+              onSubmit={handleUpdateProfile}
+              className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <PencilLine size={18} /> Thông tin cá nhân
+                </h2>
+                {loading && <span className="text-xs text-neutral-400">Đang tải...</span>}
+              </div>
 
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Họ và tên <span className="text-red-400">*</span></span>
-              <input
-                type="text"
-                name="fullName"
-                value={profile.fullName}
-                onChange={handleProfileChange}
-                className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                required
-              />
-              <p className="text-[11px] text-neutral-500">Field bắt buộc cho PATCH /api/Users/me</p>
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Email</span>
-              <input
-                type="email"
-                name="email"
-                value={profile.email}
-                readOnly
-                className="w-full cursor-not-allowed rounded-xl bg-neutral-800 px-3 py-3 text-neutral-400 outline-none"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Số điện thoại</span>
-              <input
-                type="text"
-                name="phoneNumber"
-                value={profile.phoneNumber}
-                onChange={handleProfileChange}
-                className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Avatar URL</span>
-              <input
-                type="text"
-                name="avatarUrl"
-                value={profile.avatarUrl}
-                onChange={handleProfileChange}
-                className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                placeholder="https://..."
-              />
-              <p className="text-[11px] text-neutral-500">Optional, chấp nhận http/https</p>
-            </label>
-
-            <div className="space-y-2 text-sm">
-              <span className="text-neutral-300">Tải ảnh đại diện từ máy</span>
-              <div className="rounded-xl border border-white/10 bg-neutral-800 p-3 space-y-3">
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">
+                  Họ và tên <span className="text-red-400">*</span>
+                </span>
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarFileUpload}
-                  disabled={uploadingAvatar}
-                  className="w-full text-sm text-neutral-300 file:mr-3 file:rounded-lg file:border-0 file:bg-lime-400 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-black"
+                  type="text"
+                  name="fullName"
+                  value={profile.fullName}
+                  onChange={handleProfileChange}
+                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                  required
                 />
-                <div className="flex items-center gap-3">
-                  {profile.avatarUrl ? (
-                    <img
-                      src={profile.avatarUrl}
-                      alt="avatar-preview"
-                      className="h-12 w-12 rounded-full object-cover border border-white/10"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-neutral-700 border border-white/10" />
-                  )}
-                  <p className="text-[11px] text-neutral-500">
-                    {uploadingAvatar ? 'Đang tải ảnh lên...' : 'Chọn ảnh để tự động upload và điền Avatar URL'}
-                  </p>
+                <p className="text-[11px] text-neutral-500">
+                  Field bắt buộc cho PATCH /api/Users/me
+                </p>
+              </label>
+
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">Email</span>
+                <input
+                  type="email"
+                  name="email"
+                  value={profile.email}
+                  readOnly
+                  className="w-full cursor-not-allowed rounded-xl bg-neutral-800 px-3 py-3 text-neutral-400 outline-none"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">Số điện thoại</span>
+                <input
+                  type="text"
+                  name="phoneNumber"
+                  value={profile.phoneNumber}
+                  onChange={handleProfileChange}
+                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">Avatar URL</span>
+                <input
+                  type="text"
+                  name="avatarUrl"
+                  value={profile.avatarUrl}
+                  onChange={handleProfileChange}
+                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                  placeholder="https://..."
+                />
+                <p className="text-[11px] text-neutral-500">Optional, chấp nhận http/https</p>
+              </label>
+
+              <div className="space-y-2 text-sm">
+                <span className="text-neutral-300">Tải ảnh đại diện từ máy</span>
+                <div className="rounded-xl border border-white/10 bg-neutral-800 p-3 space-y-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarFileUpload}
+                    disabled={uploadingAvatar}
+                    className="w-full text-sm text-neutral-300 file:mr-3 file:rounded-lg file:border-0 file:bg-lime-400 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-black"
+                  />
+                  <div className="flex items-center gap-3">
+                    {profile.avatarUrl ? (
+                      <img
+                        src={profile.avatarUrl}
+                        alt="avatar-preview"
+                        className="h-12 w-12 rounded-full object-cover border border-white/10"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-neutral-700 border border-white/10" />
+                    )}
+                    <p className="text-[11px] text-neutral-500">
+                      {uploadingAvatar
+                        ? 'Đang tải ảnh lên...'
+                        : 'Chọn ảnh để tự động upload và điền Avatar URL'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Bio</span>
-              <textarea
-                name="bio"
-                value={profile.bio}
-                onChange={handleProfileChange}
-                className="h-28 w-full resize-none rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-              />
-            </label>
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">Bio</span>
+                <textarea
+                  name="bio"
+                  value={profile.bio}
+                  onChange={handleProfileChange}
+                  className="h-28 w-full resize-none rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                />
+              </label>
 
-            <button
-              type="submit"
-              disabled={savingProfile}
-              className="w-full rounded-xl bg-lime-400 py-3 text-sm font-semibold text-black transition-all hover:bg-lime-500 disabled:opacity-70"
-            >
-              {savingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </button>
-          </form>
-
-          <form
-            onSubmit={handleChangePassword}
-            className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold flex items-center gap-2"><KeyRound size={18} /> Đổi mật khẩu</h2>
-            </div>
-
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Mật khẩu hiện tại <span className="text-red-400">*</span></span>
-              <input
-                type="password"
-                name="currentPassword"
-                value={passwordForm.currentPassword}
-                onChange={handlePasswordChange}
-                className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                required
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Mật khẩu mới <span className="text-red-400">*</span></span>
-              <input
-                type="password"
-                name="newPassword"
-                value={passwordForm.newPassword}
-                onChange={handlePasswordChange}
-                className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                required
-              />
-              <p className="text-[11px] text-neutral-500">Tối thiểu 6 ký tự</p>
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="text-neutral-300">Xác nhận mật khẩu mới</span>
-              <input
-                type="password"
-                name="confirmNewPassword"
-                value={passwordForm.confirmNewPassword}
-                onChange={handlePasswordChange}
-                className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                required
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={changingPassword}
-              className="w-full rounded-xl bg-white py-3 text-sm font-semibold text-black transition-all hover:bg-neutral-200 disabled:opacity-70"
-            >
-              {changingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
-            </button>
-          </form>
-
-          <div className="lg:col-span-2 rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h3 className="text-base font-semibold text-red-300">Đăng xuất tài khoản</h3>
-                <p className="text-xs text-neutral-400 mt-1">Thoát phiên hiện tại và quay về màn hình đăng nhập.</p>
-              </div>
               <button
-                type="button"
-                onClick={handleLogout}
-                disabled={logoutLoading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 disabled:opacity-70"
+                type="submit"
+                disabled={savingProfile}
+                className="w-full rounded-xl bg-lime-400 py-3 text-sm font-semibold text-black transition-all hover:bg-lime-500 disabled:opacity-70"
               >
-                <LogOut size={16} />
-                {logoutLoading ? 'Đang đăng xuất...' : 'Logout'}
+                {savingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
+            </form>
+
+            <form
+              onSubmit={handleChangePassword}
+              className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <KeyRound size={18} /> Đổi mật khẩu
+                </h2>
+              </div>
+
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">
+                  Mật khẩu hiện tại <span className="text-red-400">*</span>
+                </span>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  value={passwordForm.currentPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                  required
+                />
+              </label>
+
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">
+                  Mật khẩu mới <span className="text-red-400">*</span>
+                </span>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordForm.newPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                  required
+                />
+                <p className="text-[11px] text-neutral-500">Tối thiểu 6 ký tự</p>
+              </label>
+
+              <label className="space-y-2 text-sm">
+                <span className="text-neutral-300">Xác nhận mật khẩu mới</span>
+                <input
+                  type="password"
+                  name="confirmNewPassword"
+                  value={passwordForm.confirmNewPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
+                  required
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={changingPassword}
+                className="w-full rounded-xl bg-white py-3 text-sm font-semibold text-black transition-all hover:bg-neutral-200 disabled:opacity-70"
+              >
+                {changingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
+              </button>
+            </form>
+
+            <div className="lg:col-span-2 rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-semibold text-red-300">Đăng xuất tài khoản</h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Thoát phiên hiện tại và quay về màn hình đăng nhập.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={logoutLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 disabled:opacity-70"
+                >
+                  <LogOut size={16} />
+                  {logoutLoading ? 'Đang đăng xuất...' : 'Logout'}
+                </button>
+              </div>
             </div>
-          </div>
           </div>
         )}
       </div>
@@ -725,16 +787,16 @@ function Profile() {
 }
 
 const StatCard = ({ title, value, icon, sub }) => (
-    <div className="p-4 bg-neutral-900 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-        <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{title}</span>
-            {icon}
-        </div>
-        <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-white">{value}</span>
-            <span className="text-[10px] text-neutral-500 font-medium">{sub}</span>
-        </div>
+  <div className="p-4 bg-neutral-900 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+    <div className="flex justify-between items-start mb-2">
+      <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{title}</span>
+      {icon}
     </div>
+    <div className="flex items-baseline gap-1">
+      <span className="text-2xl font-bold text-white">{value}</span>
+      <span className="text-[10px] text-neutral-500 font-medium">{sub}</span>
+    </div>
+  </div>
 );
 
 export default Profile;
