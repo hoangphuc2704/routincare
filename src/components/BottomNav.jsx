@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import authApi from '../api/authApi';
 import userApi from '../api/userApi';
 import { clearAllAuth, getRefreshToken } from '../utils/tokenService';
-import { BellIcon, SearchIcon } from './Icons';
+import { BellIcon, SearchIcon, UsersIcon } from './Icons';
 
 // --- Icons ---
 export const HomeIcon = ({ className, filled }) => (
@@ -113,7 +113,7 @@ export default function BottomNav({ activeItem }) {
         const data = res.data?.data || res.data;
         if (data.avatarUrl) {
           setAvatar(data.avatarUrl);
-          
+
           // Update localStorage for other components
           if (storedUser) {
             const user = JSON.parse(storedUser);
@@ -171,6 +171,7 @@ export default function BottomNav({ activeItem }) {
     { key: 'notification', to: '/notification', label: 'Notifications', icon: BellIcon },
     { key: 'target', to: '/customer/selfroutin', label: 'Plan', icon: TargetIcon },
     { key: 'message', to: '/customer/message', label: 'Chat', icon: MessageCircleIcon },
+    { key: 'friends', to: '/customer/friend/list', label: 'Friends', icon: UsersIcon },
   ];
 
   return (
@@ -183,21 +184,33 @@ export default function BottomNav({ activeItem }) {
               <HomeIcon className="w-6 h-6" filled={activeItem === 'home'} />
             </Link>
 
-            <Link to="/customer/users/search" className="p-2 text-white hover:text-[#d2fb05] transition-colors">
+            <Link
+              to="/customer/users/search"
+              className="p-2 text-white hover:text-[#d2fb05] transition-colors"
+            >
               <SearchIcon className="w-6 h-6" />
             </Link>
 
-            <Link to="/notification" className="p-2 text-white hover:text-[#d2fb05] transition-colors relative">
+            <Link
+              to="/customer/friend/list"
+              className={`p-2 transition-all ${getItemClass('friends')}`}
+            >
+              <UsersIcon className="w-6 h-6" filled={activeItem === 'friends'} />
+            </Link>
+
+            <Link
+              to="/customer/message"
+              className={`p-2 transition-all ${getItemClass('message')}`}
+            >
+              <MessageCircleIcon className="w-6 h-6" filled={activeItem === 'message'} />
+            </Link>
+
+            <Link
+              to="/notification"
+              className="p-2 text-white hover:text-[#d2fb05] transition-colors relative"
+            >
               <BellIcon className="w-6 h-6" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-black" />
-            </Link>
-
-            <Link to="/customer/selfroutin" className={`p-2 transition-all ${getItemClass('target')}`}>
-              <TargetIcon className="w-6 h-6" filled={activeItem === 'target'} />
-            </Link>
-
-            <Link to="/customer/message" className={`p-2 transition-all ${getItemClass('message')}`}>
-              <MessageCircleIcon className="w-6 h-6" filled={activeItem === 'message'} />
             </Link>
           </div>
 
@@ -210,7 +223,10 @@ export default function BottomNav({ activeItem }) {
               }`}
             >
               <img
-                src={avatar || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop"}
+                src={
+                  avatar ||
+                  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop'
+                }
                 alt="Profile"
                 className="w-full h-full object-cover rounded-full"
               />
@@ -225,7 +241,10 @@ export default function BottomNav({ activeItem }) {
         className="hidden md:flex fixed left-0 top-0 h-screen w-[86px] hover:w-[220px] z-50 border-r border-white/10 bg-[#101010]/95 backdrop-blur-md transition-[width] duration-150 group"
       >
         <div className="h-full w-full flex flex-col py-6 px-3">
-          <Link to="/home" className="flex items-center gap-3 px-3 text-white hover:text-[#d2fb05] transition-colors">
+          <Link
+            to="/home"
+            className="flex items-center gap-3 px-3 text-white hover:text-[#d2fb05] transition-colors"
+          >
             <span className="text-2xl font-black text-white leading-none">R</span>
             <span className="text-lg font-bold text-white whitespace-nowrap overflow-hidden max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 transition-all duration-150">
               Routin
@@ -241,7 +260,9 @@ export default function BottomNav({ activeItem }) {
                   key={item.key}
                   to={item.to}
                   className={`flex items-center gap-4 rounded-xl px-3 py-3 transition-all ${
-                    isActive ? 'text-[#d2fb05] bg-white/5' : 'text-white hover:text-[#d2fb05] hover:bg-white/5'
+                    isActive
+                      ? 'text-[#d2fb05] bg-white/5'
+                      : 'text-white hover:text-[#d2fb05] hover:bg-white/5'
                   }`}
                 >
                   <Icon className="w-7 h-7 shrink-0" filled={isActive} />
@@ -279,14 +300,20 @@ export default function BottomNav({ activeItem }) {
             )}
           </div>
 
-          <Link to="/profile" className="mb-2 flex items-center gap-4 rounded-xl px-1 py-3 hover:bg-white/5 transition-all">
+          <Link
+            to="/profile"
+            className="mb-2 flex items-center gap-4 rounded-xl px-1 py-3 hover:bg-white/5 transition-all"
+          >
             <div
               className={`w-11 h-11 rounded-full border-2 p-0.5 overflow-hidden shrink-0 ${
                 activeItem === 'profile' ? 'border-[#d2fb05]' : 'border-white/20'
               }`}
             >
               <img
-                src={avatar || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop"}
+                src={
+                  avatar ||
+                  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop'
+                }
                 alt="Profile"
                 className="w-full h-full object-cover rounded-full"
               />

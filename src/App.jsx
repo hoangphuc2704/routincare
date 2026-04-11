@@ -15,6 +15,7 @@ import Profile from './page/customer/profile/Profile';
 import MessagePage from './page/customer/message/MessagePage';
 import ChatDetail from './page/customer/message/ChatDetail';
 import FriendRequests from './page/customer/friend/FriendRequests';
+import FriendsList from './page/customer/friend/FriendsList';
 import SubscriptionPage from './page/customer/subscription/SubscriptionPage';
 import PlanDetailPage from './page/customer/subscription/PlanDetailPage';
 import UserSearchPage from './page/customer/user/UserSearchPage';
@@ -60,6 +61,7 @@ function App() {
         <Route path="/customer/message" element={<MessagePage />} />
         <Route path="/customer/message/:id" element={<ChatDetail />} />
         <Route path="/customer/friend/requests" element={<FriendRequests />} />
+        <Route path="/customer/friend/list" element={<FriendsList />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<ProtectedAdminRoute element={<AdminLayout />} />}>
