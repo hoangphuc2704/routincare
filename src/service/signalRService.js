@@ -14,7 +14,7 @@ class SignalRService {
       return this._startPromise || Promise.resolve();
     }
 
-    const baseUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_BASE_URL || '';
+    const baseUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_BASE_URLL || '';
     const hubUrl = `${baseUrl}/hubs/chat`;
 
     console.log('🔌 Connecting to SignalR Hub:', hubUrl);
@@ -69,12 +69,38 @@ class SignalRService {
   }
 
   async joinConversation(conversationId) {
-    if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
+    if (!this.connection) {
+      console.warn('⚠️ SignalR not initialized');
+      return;
+    }
+
+    if (this.connection.state !== signalR.HubConnectionState.Connected) {
+      console.warn(`⏳ SignalR not connected yet (state: ${this.connection.state}), waiting...`);
+      // Wait for connection if connecting
+      if (this.connection.state === signalR.HubConnectionState.Connecting) {
+        await this._startPromise;
+      } else {
+        // Try to connect
+        await this.connect();
+      }
+    }
+
+    console.log(`📤 Invoking JoinConversation for: ${conversationId}`);
     await this.connection.invoke('JoinConversation', conversationId);
   }
 
   async leaveConversation(conversationId) {
-    if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
+    if (!this.connection) {
+      console.warn('⚠️ SignalR not initialized');
+      return;
+    }
+
+    if (this.connection.state !== signalR.HubConnectionState.Connected) {
+      console.warn(`⏳ SignalR not available (state: ${this.connection.state})`);
+      return;
+    }
+
+    console.log(`📤 Invoking LeaveConversation for: ${conversationId}`);
     await this.connection.invoke('LeaveConversation', conversationId);
   }
 
