@@ -115,8 +115,20 @@ export default function ChatDetail() {
 
     try {
       await sendMessage(conversationId, body);
-    } catch {
-      antdMessage.error('Gửi tin nhắn thất bại');
+    } catch (err) {
+      console.error('❌ Send message error:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Gửi tin nhắn thất bại';
+
+      // Check for network errors
+      if (
+        err.message === 'Network Error' ||
+        err.code === 'NETWORK_ERROR' ||
+        err.code === 'ERR_CONNECTION_REFUSED'
+      ) {
+        antdMessage.error('Kết nối thất bại. Vui lòng kiểm tra internet hoặc thử lại sau.');
+      } else {
+        antdMessage.error(errorMsg);
+      }
     }
   };
 
@@ -198,9 +210,11 @@ export default function ChatDetail() {
         ) : conversationMessages.length > 0 ? (
           conversationMessages.map((msg) => {
             const isMe = msg.SenderId === currentUserId;
+            // Use stable clientMessageId as key instead of MessageId which may change
+            const messageKey = msg.ClientMessageId || msg.MessageId;
             return (
               <div
-                key={msg.MessageId}
+                key={messageKey}
                 className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
               >
                 <div

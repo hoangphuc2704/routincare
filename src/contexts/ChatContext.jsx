@@ -56,7 +56,63 @@ export const ChatProvider = ({ children }) => {
     console.log('📩 Real-time message:', message);
 
     setMessages((prev) => {
-      if (prev.some((m) => m.MessageId === message.messageId)) return prev;
+      // Primary check: By ClientMessageId (stable throughout message lifecycle)
+      if (message.clientMessageId) {
+        const exists = prev.find((m) => m.ClientMessageId === message.clientMessageId);
+        if (exists) {
+          // If it's a temp message being replaced with real ID, update it
+          if (exists.MessageId.startsWith('temp-')) {
+            console.log(
+              '✏️ Replacing optimistic message:',
+              exists.MessageId,
+              '→',
+              message.messageId
+            );
+            return prev.map((m) =>
+              m.ClientMessageId === message.clientMessageId
+                ? {
+                    MessageId: message.messageId,
+                    ConversationId: message.conversationId,
+                    SenderId: message.senderId,
+                    Type: message.type,
+                    Body: message.body,
+                    CreatedAt: message.createdAt,
+                    ClientMessageId: message.clientMessageId,
+                  }
+                : m
+            );
+          } else {
+            console.log('⚠️ Message already exists:', message.clientMessageId);
+            return prev;
+          }
+        }
+      }
+
+      // Fallback check: Check by MessageId if no ClientMessageId
+      if (prev.some((m) => m.MessageId === message.messageId && !m.MessageId.startsWith('temp-'))) {
+        console.log('⚠️ Message already exists by ID:', message.messageId);
+        return prev;
+      }
+
+      // Check for duplicate by content + conversationId + time proximity
+      const isDuplicate = prev.some((m) => {
+        if (m.Body !== message.body || m.ConversationId !== message.conversationId) {
+          return false;
+        }
+        const timeDiff = Math.abs(
+          new Date(m.CreatedAt).getTime() - new Date(message.createdAt).getTime()
+        );
+        return timeDiff < 2000; // 2 second window
+      });
+
+      if (isDuplicate) {
+        console.log('⚠️ Message already exists (duplicate by content):', message.body);
+        return prev;
+      }
+
+      // Add new message with stable ClientMessageId
+      const clientMessageId =
+        message.clientMessageId || `received-${message.messageId}-${Date.now()}`;
       return [
         ...prev,
         {
@@ -66,6 +122,7 @@ export const ChatProvider = ({ children }) => {
           Type: message.type,
           Body: message.body,
           CreatedAt: message.createdAt,
+          ClientMessageId: clientMessageId,
         },
       ];
     });
@@ -154,6 +211,7 @@ export const ChatProvider = ({ children }) => {
           Type: msg.type,
           Body: msg.body,
           CreatedAt: msg.createdAt,
+          ClientMessageId: msg.clientMessageId || `loaded-${msg.messageId || msg.id}-${Date.now()}`,
         }))
         .sort((a, b) => new Date(a.CreatedAt) - new Date(b.CreatedAt));
       setMessages(normalized);
@@ -169,7 +227,9 @@ export const ChatProvider = ({ children }) => {
       const userId = getCurrentUserId();
       if (!conversationId || !body?.trim()) return;
 
-      const tempId = `temp-${Date.now()}`;
+      const clientMessageId = `client-${Date.now()}-${Math.random()}`;
+      const tempId = `temp-${clientMessageId}`;
+
       const optimistic = {
         MessageId: tempId,
         ConversationId: conversationId,
@@ -177,6 +237,7 @@ export const ChatProvider = ({ children }) => {
         Type: 'Text',
         Body: body,
         CreatedAt: new Date().toISOString(),
+        ClientMessageId: clientMessageId,
       };
       setMessages((prev) => [...prev, optimistic]);
 
@@ -194,6 +255,7 @@ export const ChatProvider = ({ children }) => {
                     Type: sent.type,
                     Body: sent.body,
                     CreatedAt: sent.createdAt,
+                    ClientMessageId: clientMessageId,
                   }
                 : m
             )
