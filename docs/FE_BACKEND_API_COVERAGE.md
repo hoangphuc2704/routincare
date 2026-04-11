@@ -4,7 +4,7 @@ Tai lieu nay doi chieu endpoint FE dang goi trong [src/api](../src/api) voi back
 
 ## 1. Scope va nguon doi chieu
 
-- FE source: [src/api/adminApi.jsx](../src/api/adminApi.jsx), [src/api/analyticsApi.jsx](../src/api/analyticsApi.jsx), [src/api/authApi.jsx](../src/api/authApi.jsx), [src/api/categoryApi.jsx](../src/api/categoryApi.jsx), [src/api/chatApi.jsx](../src/api/chatApi.jsx), [src/api/friendApi.jsx](../src/api/friendApi.jsx), [src/api/mediaApi.jsx](../src/api/mediaApi.jsx), [src/api/paymentApi.jsx](../src/api/paymentApi.jsx), [src/api/routineApi.jsx](../src/api/routineApi.jsx), [src/api/subscriptionApi.jsx](../src/api/subscriptionApi.jsx), [src/api/taskLogApi.jsx](../src/api/taskLogApi.jsx), [src/api/userApi.jsx](../src/api/userApi.jsx)
+- FE source: [src/api/adminApi.jsx](../src/api/adminApi.jsx), [src/api/analyticsApi.jsx](../src/api/analyticsApi.jsx), [src/api/authApi.jsx](../src/api/authApi.jsx), [src/api/categoryApi.jsx](../src/api/categoryApi.jsx), [src/api/chatApi.jsx](../src/api/chatApi.jsx), [src/api/feedApi.jsx](../src/api/feedApi.jsx), [src/api/friendApi.jsx](../src/api/friendApi.jsx), [src/api/mediaApi.jsx](../src/api/mediaApi.jsx), [src/api/paymentApi.jsx](../src/api/paymentApi.jsx), [src/api/postApi.jsx](../src/api/postApi.jsx), [src/api/routineApi.jsx](../src/api/routineApi.jsx), [src/api/subscriptionApi.jsx](../src/api/subscriptionApi.jsx), [src/api/taskLogApi.jsx](../src/api/taskLogApi.jsx), [src/api/userApi.jsx](../src/api/userApi.jsx)
 - Backend source: [docs/Api Specification](./Api%20Specification)
 - Ghi chu:
   - FE goi endpoint voi prefix `/api/...`.
@@ -26,7 +26,9 @@ Tai lieu nay doi chieu endpoint FE dang goi trong [src/api](../src/api) voi back
 | Chat Direct | 6 | 6 | Day du |
 | Analytics (user) | 7 | 7 | Day du |
 | Admin Management | 12 | 3 (+5 category admin) | Moi noi mot phan |
-| Feed/Posts/Reels/Creator/Notifications | nhieu endpoint pending | 0 | Chua co FE API wrappers |
+| Feed/Explore | 4 | 4 | Day du wrappers, dang dung o Home |
+| Posts/Comments/Likes | 12 | 12 | Day du wrappers + Home da ho tro like/comment/sort comment |
+| Reels/Creator/Notifications | nhieu endpoint pending | 0 | Chua co FE API wrappers |
 
 ## 3. Chi tiet doi chieu
 
@@ -274,11 +276,68 @@ Backend spec co nhieu endpoint admin dang IN PROGRESS/PENDING:
 
 FE hien chua co wrappers cho cac endpoint tren trong [src/api](../src/api).
 
-## 3.12 Feed, Posts, Reels, Creator, Notifications
+## 3.12 Feed + Explore
+
+Backend spec:
+- GET `/feed`
+- GET `/explore`
+- GET `/explore/routines`
+- GET `/explore/users`
+
+FE da noi day du 4/4 endpoint trong [src/api/feedApi.jsx](../src/api/feedApi.jsx):
+- GET `/api/feed`
+- GET `/api/explore`
+- GET `/api/explore/routines`
+- GET `/api/explore/users`
+
+Ghi chu:
+- Home page da su dung wrappers nay de load du lieu tab Feed/Explore trong [src/page/customer/home/HomePage.jsx](../src/page/customer/home/HomePage.jsx).
+
+## 3.13 Posts + Comments + Likes
+
+Backend spec:
+- GET `/posts`
+- GET `/posts/:id`
+- POST `/posts`
+- DELETE `/posts/:id`
+- POST `/posts/:id/like`
+- GET `/posts/:id/likes`
+- POST `/posts/:id/comments`
+- GET `/posts/:id/comments`
+- PATCH `/posts/:id/comments/:commentId`
+- DELETE `/posts/:id/comments/:commentId`
+- DELETE `/admin/posts/:id`
+- DELETE `/admin/comments/:id`
+
+FE da noi day du 12/12 endpoint trong [src/api/postApi.jsx](../src/api/postApi.jsx):
+- GET `/api/posts`
+- GET `/api/posts/:id`
+- POST `/api/posts`
+- DELETE `/api/posts/:id`
+- POST `/api/posts/:id/like`
+- GET `/api/posts/:id/likes`
+- POST `/api/posts/:id/comments`
+- GET `/api/posts/:id/comments`
+- PATCH `/api/posts/:id/comments/:commentId`
+- DELETE `/api/posts/:id/comments/:commentId`
+- DELETE `/api/admin/posts/:id`
+- DELETE `/api/admin/comments/:id`
+
+Compatibility note:
+- `src/api/postApi.jsx` da them fallback tu lowercase sang PascalCase (`/api/posts` -> `/api/Posts`) neu gap `404`, de giam loi do khac biet route casing giua moi truong.
+
+Ghi chu:
+- Home page da chuyen nguon Feed sang Posts API va ho tro:
+  - like post
+  - mo danh sach comment
+  - tao comment
+  - sort comment theo `Moi nhat` / `Cu nhat` / `Nhieu like`
+  trong [src/page/customer/home/HomePage.jsx](../src/page/customer/home/HomePage.jsx) va [src/components/FeedPost.jsx](../src/components/FeedPost.jsx).
+- Neu Home phai fallback sang `GET /feed` (khi `GET /posts` loi), FE se danh dau item la non-interactive de tranh goi nham `/posts/:id/comments|like` gay `404`.
+
+## 3.14 Reels, Creator, Notifications
 
 Theo backend spec, cac module nay chua thay FE wrapper trong [src/api](../src/api):
-- Feed/Explore
-- Posts/Comments/Likes
 - Reels
 - Creator dashboard
 - Notifications

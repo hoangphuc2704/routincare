@@ -49,6 +49,28 @@ const RoutineDetailPage = () => {
     const [taskPrepareEditing, setTaskPrepareEditing] = useState({});
     const [evidenceFiles, setEvidenceFiles] = useState({});
 
+    const normalizeRemindTimeForInput = (value) => {
+        if (!value) return '';
+        const str = String(value).trim();
+        if (!str) return '';
+
+        // API may return "HH:mm:ss" while <input type="time"> usually binds as "HH:mm".
+        if (str.includes(':')) {
+            return str.slice(0, 5);
+        }
+        return str;
+    };
+
+    const normalizeRemindTimeForApi = (value) => {
+        const str = String(value || '').trim();
+        if (!str) return null;
+
+        // Ensure backend receives TimeSpan-compatible format.
+        if (/^\d{2}:\d{2}$/.test(str)) return `${str}:00`;
+        if (/^\d{2}:\d{2}:\d{2}$/.test(str)) return str;
+        return null;
+    };
+
     const fetchRoutine = async () => {
         try {
             setLoading(true);
@@ -58,7 +80,7 @@ const RoutineDetailPage = () => {
             setEditForm({
                 title: data?.title || '',
                 description: data?.description || '',
-                remindTime: data?.remindTime || '',
+                remindTime: normalizeRemindTimeForInput(data?.remindTime),
                 repeatType: typeof data?.repeatType === 'number' ? data.repeatType : 0,
                 repeatDays: data?.repeatDays || '',
                 visibility: typeof data?.visibility === 'number' ? data.visibility : 1,
@@ -125,7 +147,7 @@ const RoutineDetailPage = () => {
             const payload = {
                 title: editForm.title,
                 description: editForm.description || null,
-                remindTime: editForm.remindTime || null,
+                remindTime: normalizeRemindTimeForApi(editForm.remindTime),
                 repeatType: editForm.repeatType,
                 repeatDays: editForm.repeatType === 1 ? (editForm.repeatDays || null) : null,
                 visibility: editForm.visibility,
@@ -470,7 +492,7 @@ const RoutineDetailPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white font-sans pb-24">
+        <div className="min-h-screen bg-black text-white font-sans pb-36 md:pb-24 md:pl-[96px]">
             <header className="p-4 flex items-center gap-3 sticky top-0 bg-black/80 backdrop-blur-md z-30">
                 <button
                     onClick={() => navigate(-1)}
