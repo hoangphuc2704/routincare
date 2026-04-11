@@ -101,14 +101,29 @@ export const ChatProvider = ({ children }) => {
 
   // ─── Join/Leave conversation groups ───
   useEffect(() => {
-    const prevId = prevConversationIdRef.current;
-    if (prevId && prevId !== activeConversationId) {
-      signalRService.leaveConversation(prevId).catch(console.error);
-    }
-    if (activeConversationId) {
-      signalRService.joinConversation(activeConversationId).catch(console.error);
-    }
-    prevConversationIdRef.current = activeConversationId;
+    const handleGroupJoin = async () => {
+      const prevId = prevConversationIdRef.current;
+      if (prevId && prevId !== activeConversationId) {
+        console.log(`👋 Leaving conversation group: ${prevId}`);
+        try {
+          await signalRService.leaveConversation(prevId);
+        } catch (err) {
+          console.error(`Failed to leave conversation ${prevId}:`, err);
+        }
+      }
+      if (activeConversationId) {
+        console.log(`🔗 Joining conversation group: ${activeConversationId}`);
+        try {
+          await signalRService.joinConversation(activeConversationId);
+          console.log(`✅ Successfully joined conversation group: ${activeConversationId}`);
+        } catch (err) {
+          console.error(`Failed to join conversation ${activeConversationId}:`, err);
+        }
+      }
+      prevConversationIdRef.current = activeConversationId;
+    };
+
+    handleGroupJoin();
   }, [activeConversationId]);
 
   // ─── API actions ───
