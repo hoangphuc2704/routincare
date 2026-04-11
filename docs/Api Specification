@@ -29,7 +29,7 @@
 | Task Tracking (check-in, log)                | ✅ DONE    | `TaskLogsController`, `TaskLogService` |
 | Categories                                   | ✅ DONE    | `CategoriesController`                 |
 | User Profile                                 | ✅ Partial | `UsersController`                      |
-| Subscription & Payment                       | 🔨 IN PROGRESS | `SubscriptionPlansController`, `SubscriptionsController`, `PaymentService` |
+| Subscription & Payment                       | ✅ DONE    | `SubscriptionPlansController`, `SubscriptionsController`, `PaymentService` |
 | Social (Follow/Like/Comment)                 | 🔨 IN PROGRESS | DB foundation ready (`Follows`, `UserBlocks`, `FriendRequests`, `Friendships`) |
 | Friendship & Chat                            | 🔨 IN PROGRESS | `FriendsController`, `ChatsController` (Direct chat scope) |
 | Chat Realtime (SignalR)                      | ✅ DONE    | `ChatHub`, `SignalRChatRealtimeNotifier` |
@@ -155,7 +155,7 @@ POST /task-logs/checkin { task_id }
 
 ---
 
-## 6. SUBSCRIPTION & PAYMENT 🔨 IN PROGRESS
+## 6. SUBSCRIPTION & PAYMENT ✅ DONE
 
 ### 6.1 Implemented
 
@@ -169,12 +169,15 @@ POST /task-logs/checkin { task_id }
 | POST   | `/subscriptions`                    | [*]    | Tạo checkout subscription (body: `planId`)             | ✅      |
 | POST   | `/subscriptions/checkout/:planId`   | [*]    | Route compatibility cũ cho checkout                    | ✅      |
 | GET    | `/subscriptions/me`                 | [*]    | Subscription hiện tại của user                         | ✅      |
-| POST   | `/subscriptions/:id/cancel`         | [*]    | Hủy subscription                                       | ✅      |
+| POST   | `/subscriptions/:id/cancel`         | [*]    | Hủy gia hạn: Active giữ quyền tới `EndDate`, Pending hủy ngay | ✅      |
 | GET    | `/subscriptions`                    | [A]    | Tất cả subscriptions (admin)                           | ✅      |
-| POST   | `/subscriptions/webhook/payos`      | [-]    | Webhook PayOS                                          | ✅      |
+| POST   | `/subscriptions/webhook/payos`      | [-]    | Webhook PayOS (async callback)                         | ✅      |
 | GET    | `/payments/me`                      | [*]    | Lịch sử thanh toán của user                            | ✅      |
 | GET    | `/payments`                         | [A]    | Tất cả lịch sử thanh toán (admin)                      | ✅      |
-| GET    | `/payments/return`                  | [*]    | Verify return-flow từ PayOS và kích hoạt subscription  | ✅      |
+| GET    | `/payments/:id`                     | [A]    | Chi tiết một giao dịch                                 | ✅      |
+| PATCH  | `/payments/:id/status`              | [A]    | Cập nhật trạng thái giao dịch (admin)                  | ✅      |
+| POST   | `/payments/callback/payos`          | [-]    | Webhook PayOS (callback endpoint alias)                | ✅      |
+| GET    | `/payments/return`                  | [-]    | Return flow from PayOS (verify payment & activate)     | ✅      |
 
 ### 6.2 Pending
 
@@ -184,24 +187,45 @@ POST /task-logs/checkin { task_id }
 | POST   | `/payments/callback/momo`   | [-]    | Webhook MoMo                                 |
 | POST   | `/payments/verify`          | [A]    | Admin xác nhận chuyển khoản thủ công         |
 
-**Flow: Đăng ký Premium**
+**Flow: Đăng ký Premium** (Dual-path verification)
 
 ```
-1. GET  /subscription-plans              → user chọn gói
+1. GET  /subscription-plans                    → user chọn gói
 2. POST /subscriptions { planId }
           → tạo UserSubscription (Pending)
           → tạo Transaction (Pending)
-          → trả về { payment_url }
+          → trả về { checkoutUrl, orderCode }
+
 3. User redirect → PayOS checkout
-4. PayOS redirect → FE route /payment/success (hoac /payment/cancel)
-5. FE goi GET /payments/return?orderCode=...&status=PAID&code=00
-          → backend verify sync return-flow
-          → cập nhật Transaction/UserSubscription nếu hợp lệ
-6. POST /subscriptions/webhook/payos      → PayOS callback (async backup)
-          → nếu return-flow chưa thành công thì webhook vẫn activate được
-7. FE poll GET /subscriptions/me để đồng bộ trạng thái Active
-          → mở khóa Premium features (Reels upload, AI suggestions)
+
+4a. Synchronous Return Path (Immediate):
+    GET  /payments/return?orderCode=...&status=PAID&code=00
+          → verify cancel flag
+          → query PayOS API to get payment status
+          → validate amount matching
+          → update Transaction → Success
+          → update UserSubscription → Active
+          → update User.IsPremium = true
+          → trả về success response
+
+4b. Asynchronous Webhook Path (Backup):
+    POST /subscriptions/webhook/payos  (or  /payments/callback/payos)
+          → verify HMAC signature
+          → validate webhook amount = Transaction amount
+          → update Transaction → Success
+          → update UserSubscription → Active
+          → update User.IsPremium = true
+
+→ Mở khóa Premium features (Reels upload, AI suggestions)
 ```
+
+> [!NOTE]
+> **Dual-path reliability:** Nếu return flow xảy ra trước webhook, transaction sẽ được mark Success ngay lập tức. Webhook sẽ skip idempotent check nếu đã Success. Cả hai đều gọi PayOS API để verify trước cập nhật DB.
+
+> [!NOTE]
+> **Cancel policy:** `POST /subscriptions/:id/cancel` không cắt quyền ngay nếu subscription đang `Active`.
+> Hệ thống sẽ tắt `AutoRenew = false` và user tiếp tục dùng Premium đến hết `EndDate`.
+> Chỉ subscription `Pending` mới bị chuyển `Cancelled` ngay lập tức.
 
 **Premium Features unlock:**
 
@@ -322,6 +346,8 @@ POST /chats/conversations/:id/messages
 | Method | Endpoint            | Access | Mô tả                                           |
 | ------ | ------------------- | ------ | ----------------------------------------------- |
 | GET    | `/feed`             | [*]    | Feed cá nhân (từ following)                     |
+> [!NOTE]
+> Endpoint cơ bản `GET /feed` đã có để trả danh sách routine public mới nhất (fallback cho Home). Personalization theo following sẽ mở rộng ở phase tiếp theo.
 | GET    | `/explore`          | [-]    | Khám phá routines public (trending)             |
 | GET    | `/explore/routines` | [-]    | Browse routines public (filter: category, sort) |
 | GET    | `/explore/users`    | [-]    | Tìm kiếm users                                  |

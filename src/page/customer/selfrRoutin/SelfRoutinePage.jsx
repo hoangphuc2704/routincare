@@ -14,13 +14,45 @@ export default function SelfRoutinePage() {
     const [routines, setRoutines] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const resolveTaskCount = (item) => {
+        const numericCandidates = [
+            item?.taskCount,
+            item?.tasksCount,
+            item?.task_count,
+            item?.tasks_count,
+            item?.totalTasks,
+            item?.totalTask,
+            item?.routineTaskCount,
+            item?.routineTasksCount,
+        ];
+
+        for (const value of numericCandidates) {
+            const parsed = Number(value);
+            if (Number.isFinite(parsed)) return parsed;
+        }
+
+        const listCandidates = [
+            item?.tasks,
+            item?.routineTasks,
+            item?.routine_tasks,
+            item?.routine?.tasks,
+            item?.routine?.routineTasks,
+        ];
+
+        for (const arr of listCandidates) {
+            if (Array.isArray(arr)) return arr.length;
+        }
+
+        return null;
+    };
+
     const fetchMyRoutines = async () => {
         try {
             setLoading(true);
             const res = await routineApi.getMyRoutines();
             const data = res.data?.data || res.data;
 
-            const mapped = (data || []).map((item) => ({
+            let mapped = (data || []).map((item) => ({
                 id: item.id,
                 title: item.title,
                 description: item.description,
@@ -29,8 +61,39 @@ export default function SelfRoutinePage() {
                 visibility: item.visibility,
                 categoryName: item.category?.name,
                 remindTime: item.remindTime,
-                taskCount: item.tasks?.length ?? item.routineTasks?.length ?? item.taskCount ?? 0,
+                taskCount: resolveTaskCount(item),
             }));
+
+            // Some list endpoints omit tasks/taskCount, so fetch detail for unresolved routines.
+            const unresolved = mapped.filter((item) => item.taskCount === null && item.id);
+            if (unresolved.length > 0) {
+                const detailResults = await Promise.allSettled(
+                    unresolved.map((item) => routineApi.getById(item.id))
+                );
+
+                const detailCountMap = {};
+                detailResults.forEach((result, idx) => {
+                    const routineId = unresolved[idx]?.id;
+                    if (!routineId || result.status !== 'fulfilled') return;
+
+                    const detail = result.value?.data?.data || result.value?.data || {};
+                    const detailCount = resolveTaskCount(detail);
+                    detailCountMap[routineId] = detailCount ?? 0;
+                });
+
+                mapped = mapped.map((item) => ({
+                    ...item,
+                    taskCount:
+                        item.taskCount !== null
+                            ? item.taskCount
+                            : (detailCountMap[item.id] ?? 0),
+                }));
+            } else {
+                mapped = mapped.map((item) => ({
+                    ...item,
+                    taskCount: item.taskCount ?? 0,
+                }));
+            }
 
             setRoutines(mapped);
         } catch (err) {

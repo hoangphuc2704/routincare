@@ -24,6 +24,7 @@ const userApi = {
   unfollow: (id) => axiosClient.delete(`/api/Users/${id}/follow`),
   getFollowers: (id) => axiosClient.get(`/api/Users/${id}/followers`),
   getFollowing: (id) => axiosClient.get(`/api/Users/${id}/following`),
+  getFollowingRoutines: (params) => axiosClient.get('/api/users/me/following/routines', { params }),
 
   // Block / Unblock
   block: (id) => axiosClient.post(`/api/Users/${id}/block`),
