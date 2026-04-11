@@ -14,6 +14,32 @@ export default function SelfRoutinePage() {
     const [routines, setRoutines] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const normalizeEnumNumber = (value, defaultValue) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : defaultValue;
+    };
+
+    const normalizeVisibility = (value, defaultValue = 1) => {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+
+        const str = String(value || "").trim().toLowerCase();
+        if (str === "private") return 0;
+        if (str === "public") return 1;
+        if (str === "subscribersonly" || str === "subscribers") return 2;
+        return defaultValue;
+    };
+
+    const normalizeRepeatType = (value, defaultValue = 0) => {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+
+        const str = String(value || "").trim().toLowerCase();
+        if (str === "daily") return 0;
+        if (str === "weekly") return 1;
+        return defaultValue;
+    };
+
     const resolveTaskCount = (item) => {
         const numericCandidates = [
             item?.taskCount,
@@ -31,6 +57,24 @@ export default function SelfRoutinePage() {
             if (Number.isFinite(parsed)) return parsed;
         }
 
+        const resolveTaskArray = (value) => {
+            if (Array.isArray(value)) return value;
+            if (!value || typeof value !== "object") return null;
+
+            const nestedCandidates = [
+                value.items,
+                value.results,
+                value.data,
+                value.$values,
+            ];
+
+            for (const candidate of nestedCandidates) {
+                if (Array.isArray(candidate)) return candidate;
+            }
+
+            return null;
+        };
+
         const listCandidates = [
             item?.tasks,
             item?.routineTasks,
@@ -39,8 +83,9 @@ export default function SelfRoutinePage() {
             item?.routine?.routineTasks,
         ];
 
-        for (const arr of listCandidates) {
-            if (Array.isArray(arr)) return arr.length;
+        for (const candidate of listCandidates) {
+            const resolved = resolveTaskArray(candidate);
+            if (resolved) return resolved.length;
         }
 
         return null;
@@ -56,9 +101,9 @@ export default function SelfRoutinePage() {
                 id: item.id,
                 title: item.title,
                 description: item.description,
-                repeatType: item.repeatType, // 0:Daily, 1:Weekly
+                repeatType: normalizeRepeatType(item.repeatType, 0), // 0:Daily, 1:Weekly
                 repeatDays: item.repeatDays,
-                visibility: item.visibility,
+                visibility: normalizeVisibility(item.visibility, 1),
                 categoryName: item.category?.name,
                 remindTime: item.remindTime,
                 taskCount: resolveTaskCount(item),
@@ -116,14 +161,15 @@ export default function SelfRoutinePage() {
     };
 
     const visibilityLabel = (value) => {
-        if (value === 0) return "Private";
-        if (value === 1) return "Public";
-        if (value === 2) return "Subscribers";
+        const normalized = normalizeVisibility(value, -1);
+        if (normalized === 0) return "Private";
+        if (normalized === 1) return "Public";
+        if (normalized === 2) return "Subscribers";
         return "Unknown";
     };
 
     const repeatLabel = (repeatType, repeatDays) => {
-        if (repeatType === 1) return `Weekly: ${repeatDays || "—"}`;
+        if (normalizeRepeatType(repeatType, 0) === 1) return `Weekly: ${repeatDays || "—"}`;
         return "Daily";
     };
 

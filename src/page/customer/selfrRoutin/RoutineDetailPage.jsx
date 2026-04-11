@@ -71,19 +71,47 @@ const RoutineDetailPage = () => {
     return null;
   };
 
+  const normalizeVisibility = (value, defaultValue = 1) => {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+
+    const str = String(value || '').trim().toLowerCase();
+    if (str === 'private') return 0;
+    if (str === 'public') return 1;
+    if (str === 'subscribersonly' || str === 'subscribers') return 2;
+    return defaultValue;
+  };
+
+  const normalizeRepeatType = (value, defaultValue = 0) => {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+
+    const str = String(value || '').trim().toLowerCase();
+    if (str === 'daily') return 0;
+    if (str === 'weekly') return 1;
+    return defaultValue;
+  };
+
   const fetchRoutine = async () => {
     try {
       setLoading(true);
       const res = await routineApi.getById(id);
       const data = res.data?.data || res.data;
-      setRoutine(data);
+      const normalizedRepeatType = normalizeRepeatType(data?.repeatType, 0);
+      const normalizedVisibility = normalizeVisibility(data?.visibility, 1);
+
+      setRoutine({
+        ...data,
+        repeatType: normalizedRepeatType,
+        visibility: normalizedVisibility,
+      });
       setEditForm({
         title: data?.title || '',
         description: data?.description || '',
         remindTime: normalizeRemindTimeForInput(data?.remindTime),
-        repeatType: typeof data?.repeatType === 'number' ? data.repeatType : 0,
+        repeatType: normalizedRepeatType,
         repeatDays: data?.repeatDays || '',
-        visibility: typeof data?.visibility === 'number' ? data.visibility : 1,
+        visibility: normalizedVisibility,
         categoryId: data?.categoryId || data?.category?.id || '',
       });
     } catch (err) {
@@ -115,15 +143,48 @@ const RoutineDetailPage = () => {
   }, [id]);
 
   const visibilityLabel = (value) => {
-    if (value === 0) return 'Private';
-    if (value === 1) return 'Public';
-    if (value === 2) return 'SubscribersOnly';
+    const normalized = normalizeVisibility(value, -1);
+    if (normalized === 0) return 'Private';
+    if (normalized === 1) return 'Public';
+    if (normalized === 2) return 'SubscribersOnly';
     return 'Unknown';
+  };
+
+  const resolveTaskArray = (value) => {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== 'object') return [];
+
+    const nestedCandidates = [value.items, value.results, value.data, value.$values];
+    for (const candidate of nestedCandidates) {
+      if (Array.isArray(candidate)) return candidate;
+    }
+
+    return [];
+  };
+
+  const resolveTasksFromRoutine = (routineData) => {
+    const taskCandidates = [
+      routineData?.tasks,
+      routineData?.routineTasks,
+      routineData?.routine_tasks,
+      routineData?.taskDtos,
+    ];
+
+    for (const candidate of taskCandidates) {
+      const resolved = resolveTaskArray(candidate);
+      if (resolved.length > 0) return resolved;
+    }
+
+    for (const candidate of taskCandidates) {
+      if (Array.isArray(candidate) && candidate.length === 0) return candidate;
+    }
+
+    return [];
   };
 
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const getLogByTask = (taskId) => logs.find((log) => log.taskId === taskId);
-  const tasks = routine?.tasks || routine?.routineTasks || [];
+  const tasks = resolveTasksFromRoutine(routine);
   const prepareItems = routine?.prepareItems || [];
   const completedCount = tasks.reduce(
     (sum, t) => (getLogByTask(t.id || t.taskId)?.status === 1 ? sum + 1 : sum),

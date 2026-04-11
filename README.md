@@ -80,3 +80,5 @@ npm run lint
 - Da fix loi cap nhat gio nhac (`remindTime`) o trang chi tiet routine: chuan hoa format gio truoc khi submit (`HH:mm` -> `HH:mm:ss`) de backend parse TimeSpan dung, tranh loi `400 Bad Request`.
 - Da tang khoang trong day trang Routine Detail (`pb-36` tren mobile) de section Tasks khong bi BottomNav che.
 - Da fix tinh trang desktop sidebar che noi dung o Routine Detail bang cach them offset trai tren man hinh `md+` (`md:pl-[96px]`).
+- Da fix hien thi sai trang thai Public/Private sau khi cap nhat routine: FE da normalize enum `visibility` (va `repeatType`) cho ca gia tri so, numeric-string (`"0"`, `"1"`) va enum-string (`"Private"`, `"Public"`, `"Daily"`, `"Weekly"`), tranh fallback nham ve `Public`.
+- Da fix hien thi tong so task bi sai o trang routine: FE nay resolve duoc task list tu nhieu response shape (array truc tiep hoac object boc `items`/`results`/`data`/`$values`) nen `tasks.length` va badge task count da dung hon.
