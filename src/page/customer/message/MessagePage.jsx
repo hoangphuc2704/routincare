@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../../contexts/ChatContext';
 import userApi from '../../../api/userApi';
 import BottomNav from '../../../components/BottomNav';
+import { useConversationParticipants } from '../../../hook/useConversationParticipants';
 import { Search, ChevronLeft, Plus, MessageSquare } from 'lucide-react';
 
 export default function MessagePage() {
   const navigate = useNavigate();
   const { conversations, loadingConversations, loadConversations } = useChat();
+  const { participantsMap, loadingAll } = useConversationParticipants(conversations);
 
   useEffect(() => {
     loadConversations();
@@ -15,33 +17,9 @@ export default function MessagePage() {
 
   const handleSelectConversation = async (conv) => {
     try {
-      const currentUserId = JSON.parse(localStorage.getItem('user'))?.userId;
-
-      // Fetch messages to find the other participant
-      const chatApi = (await import('../../../api/chatApi')).default;
-      const messagesRes = await chatApi.getMessages(conv.conversationId);
-      const messages = messagesRes.data?.data || messagesRes.data || [];
-
-      let otherUserId = null;
-      if (messages && messages.length > 0) {
-        for (const msg of messages) {
-          const senderId = msg.senderId || msg.SenderId;
-          if (senderId !== currentUserId) {
-            otherUserId = senderId;
-            break;
-          }
-        }
-      }
-
-      let otherUser = null;
-      if (otherUserId) {
-        try {
-          const userRes = await userApi.getPublicProfile(otherUserId);
-          otherUser = userRes.data?.data || userRes.data;
-        } catch (err) {
-          console.error('Failed to fetch user profile:', err);
-        }
-      }
+      // Get participant data from cache
+      const participantData = participantsMap[conv.conversationId];
+      const otherUser = participantData?.user || null;
 
       navigate(`/customer/message/${String(conv.conversationId)}`, {
         state: { conversation: conv, user: otherUser },
@@ -98,12 +76,17 @@ export default function MessagePage() {
         </div>
 
         <div className="flex flex-col gap-3">
-          {loadingConversations ? (
+          {loadingConversations || loadingAll ? (
             <div className="flex justify-center py-10">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-lime-400"></div>
             </div>
           ) : (
             conversations.map((conv) => {
+              const participantData = participantsMap[conv.conversationId];
+              const otherUser = participantData?.user;
+              const displayName = otherUser?.fullName || conv.title || 'Người dùng';
+              const avatarUrl = otherUser?.avatarUrl || otherUser?.avatar;
+
               return (
                 <div
                   key={conv.conversationId}
@@ -111,16 +94,27 @@ export default function MessagePage() {
                   className="flex items-center gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-lime-400/60 hover:bg-white/10 cursor-pointer transition-all active:scale-[0.98] shadow-[0_12px_30px_-18px_rgba(0,0,0,0.8)]"
                 >
                   <div className="relative flex-shrink-0">
-                    <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 hover:border-lime-400 transition-all active:scale-90 bg-lime-400/20 flex items-center justify-center">
-                      <span className="text-xl font-bold text-lime-400">
-                        {(conv.title || 'U')[0].toUpperCase()}
-                      </span>
-                    </div>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName}
+                        className="w-14 h-14 rounded-full object-cover border border-white/10 hover:border-lime-400 transition-all active:scale-90"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full border border-white/10 hover:border-lime-400 transition-all active:scale-90 bg-lime-400/20 flex items-center justify-center">
+                        <span className="text-xl font-bold text-lime-400">
+                          {displayName[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-1">
-                      <h3 className="font-bold text-base truncate">{conv.title || 'Nguoi dung'}</h3>
+                      <h3 className="font-bold text-base truncate">{displayName}</h3>
                       <span className="text-xs text-zinc-500">
                         {conv.lastMessageAt
                           ? new Date(conv.lastMessageAt).toLocaleTimeString([], {

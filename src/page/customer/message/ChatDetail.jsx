@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useChat } from '../../../contexts/ChatContext';
+import chatApi from '../../../api/chatApi';
+import userApi from '../../../api/userApi';
 import {
   ChevronLeft,
   Send,
@@ -19,7 +21,7 @@ export default function ChatDetail() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const conversation = state?.conversation || { title: 'User' };
-  const otherUser = state?.user || {};
+  let otherUser = state?.user || state?.partner || {};
 
   const {
     messages,
@@ -33,6 +35,54 @@ export default function ChatDetail() {
   const currentUserId = getCurrentUserId();
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef(null);
+  const [fetchedOtherUser, setFetchedOtherUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(false);
+
+  // Fetch participant data if not available in state
+  useEffect(() => {
+    if (otherUser?.id || otherUser?.userId) {
+      // User data already available from state
+      return;
+    }
+
+    const fetchParticipant = async () => {
+      try {
+        setLoadingUser(true);
+        const myId = getCurrentUserId();
+        if (!myId || !conversationId) return;
+
+        // Get messages to find the other participant ID
+        const messagesRes = await chatApi.getMessages(conversationId);
+        const msgs = messagesRes.data?.data || messagesRes.data || [];
+
+        let otherUserId = null;
+        if (msgs && msgs.length > 0) {
+          for (const msg of msgs) {
+            const senderId = msg.senderId || msg.SenderId;
+            if (senderId && senderId !== myId) {
+              otherUserId = senderId;
+              break;
+            }
+          }
+        }
+
+        if (otherUserId) {
+          const userRes = await userApi.getPublicProfile(otherUserId);
+          const userData = userRes.data?.data || userRes.data;
+          if (userData) {
+            setFetchedOtherUser(userData);
+            otherUser = userData;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch participant data:', err);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchParticipant();
+  }, [conversationId, currentUserId, otherUser?.id]);
 
   // Set active conversation for SignalR group + load messages
   useEffect(() => {
@@ -54,9 +104,7 @@ export default function ChatDetail() {
   }, [messages]);
 
   // Filter messages for this conversation only
-  const conversationMessages = messages.filter(
-    (msg) => msg.ConversationId === conversationId
-  );
+  const conversationMessages = messages.filter((msg) => msg.ConversationId === conversationId);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -85,15 +133,38 @@ export default function ChatDetail() {
           </button>
           <div className="flex items-center gap-3 cursor-pointer group hover:bg-white/5 px-2 py-1 rounded-2xl transition-all active:scale-95">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full overflow-hidden border border-white/15 group-hover:border-lime-400 transition-all bg-lime-400/20 flex items-center justify-center">
-                <span className="text-xs font-bold text-lime-400">
-                  {(otherUser.fullName || conversation.title || 'U')[0].toUpperCase()}
-                </span>
+              <div className="w-11 h-11 rounded-full border border-white/15 group-hover:border-lime-400 transition-all bg-lime-400/20 flex items-center justify-center overflow-hidden">
+                {otherUser?.avatarUrl || fetchedOtherUser?.avatarUrl ? (
+                  <img
+                    src={otherUser?.avatarUrl || fetchedOtherUser?.avatarUrl}
+                    alt={otherUser?.fullName || fetchedOtherUser?.fullName || 'User'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span className="text-xs font-bold text-lime-400">
+                    {(otherUser?.fullName ||
+                      fetchedOtherUser?.fullName ||
+                      conversation.title ||
+                      'U')[0].toUpperCase()}
+                  </span>
+                )}
               </div>
               <div>
                 <h3 className="font-semibold text-sm group-hover:text-lime-400 transition-all flex items-center gap-1">
-                  {otherUser.fullName || conversation.title || 'Nguoi dung'}
-                  <ShieldCheck size={14} className="text-lime-300" />
+                  {loadingUser ? (
+                    <span className="text-xs text-zinc-400">Đang tải...</span>
+                  ) : (
+                    <>
+                      {otherUser?.fullName ||
+                        fetchedOtherUser?.fullName ||
+                        conversation.title ||
+                        'Nguoi dung'}
+                      <ShieldCheck size={14} className="text-lime-300" />
+                    </>
+                  )}
                 </h3>
                 <span className="text-[11px] text-lime-300/80 flex items-center gap-1">
                   <Dot size={16} className="-ml-1" /> Active now
