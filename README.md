@@ -82,3 +82,5 @@ npm run lint
 - Da fix tinh trang desktop sidebar che noi dung o Routine Detail bang cach them offset trai tren man hinh `md+` (`md:pl-[96px]`).
 - Da fix hien thi sai trang thai Public/Private sau khi cap nhat routine: FE da normalize enum `visibility` (va `repeatType`) cho ca gia tri so, numeric-string (`"0"`, `"1"`) va enum-string (`"Private"`, `"Public"`, `"Daily"`, `"Weekly"`), tranh fallback nham ve `Public`.
 - Da fix hien thi tong so task bi sai o trang routine: FE nay resolve duoc task list tu nhieu response shape (array truc tiep hoac object boc `items`/`results`/`data`/`$values`) nen `tasks.length` va badge task count da dung hon.
+- Da cap nhat mapping ten nguoi tao routine tren feed Home: FE uu tien cac field moi tu backend nhu `creatorNamee`/`creatorName` (kem avatar/id creator aliases) de hien thi dung tac gia routine.
+- Da bo sung them mapping nested cho ten creator trong payload routine (`routine.creatorNamee`, `routine.creatorName`, creator object trong routine) de dam bao bai cua nguoi khac hien dung ten.

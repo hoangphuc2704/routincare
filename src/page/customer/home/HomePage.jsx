@@ -108,8 +108,25 @@ function normalizePostItem(item, index, options = {}) {
   const { canInteract = true } = options;
   const me = getCurrentUserSnapshot();
   const user = item?.user || item?.owner || item?.author || {};
+  const creator = item?.creator || item?.routineCreator || {};
+  const routine = item?.routine || item?.routineDetail || item?.originalRoutine || {};
+  const routineCreator = routine?.creator || routine?.owner || routine?.author || {};
   const rawPostId = item?.id || item?.postId || item?.post_id || null;
   const normalizedUserId =
+    creator?.id ||
+    creator?.userId ||
+    creator?.user_id ||
+    routineCreator?.id ||
+    routineCreator?.userId ||
+    routineCreator?.user_id ||
+    item?.creatorId ||
+    item?.creator_id ||
+    item?.routineCreatorId ||
+    item?.routine_creator_id ||
+    routine?.creatorId ||
+    routine?.creator_id ||
+    routine?.ownerId ||
+    routine?.owner_id ||
     user?.id ||
     user?.userId ||
     user?.user_id ||
@@ -124,6 +141,28 @@ function normalizePostItem(item, index, options = {}) {
     null;
 
   const rawName =
+    item?.creatorNamee ||
+    item?.creatornamee ||
+    item?.creatorName ||
+    item?.creator_name ||
+    item?.routineCreatorName ||
+    item?.routine_creator_name ||
+    routine?.creatorNamee ||
+    routine?.creatornamee ||
+    routine?.creatorName ||
+    routine?.creator_name ||
+    routine?.ownerName ||
+    routine?.owner_name ||
+    routineCreator?.fullName ||
+    routineCreator?.full_name ||
+    routineCreator?.name ||
+    routineCreator?.userName ||
+    routineCreator?.username ||
+    creator?.fullName ||
+    creator?.full_name ||
+    creator?.name ||
+    creator?.userName ||
+    creator?.username ||
     user?.fullName ||
     user?.full_name ||
     user?.name ||
@@ -144,6 +183,23 @@ function normalizePostItem(item, index, options = {}) {
     null;
 
   const rawAvatar =
+    item?.creatorAvatar ||
+    item?.creatorAvatarUrl ||
+    item?.creator_avatar_url ||
+    item?.routineCreatorAvatar ||
+    item?.routineCreatorAvatarUrl ||
+    routine?.creatorAvatar ||
+    routine?.creatorAvatarUrl ||
+    routine?.creator_avatar_url ||
+    routine?.ownerAvatar ||
+    routine?.ownerAvatarUrl ||
+    routine?.owner_avatar_url ||
+    routineCreator?.avatarUrl ||
+    routineCreator?.avatar ||
+    routineCreator?.avatar_url ||
+    creator?.avatarUrl ||
+    creator?.avatar ||
+    creator?.avatar_url ||
     user?.avatarUrl ||
     user?.avatar ||
     user?.avatar_url ||
