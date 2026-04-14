@@ -14,23 +14,131 @@ export default function SelfRoutinePage() {
     const [routines, setRoutines] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const normalizeEnumNumber = (value, defaultValue) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : defaultValue;
+    };
+
+    const normalizeVisibility = (value, defaultValue = 1) => {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+
+        const str = String(value || "").trim().toLowerCase();
+        if (str === "private") return 0;
+        if (str === "public") return 1;
+        if (str === "subscribersonly" || str === "subscribers") return 2;
+        return defaultValue;
+    };
+
+    const normalizeRepeatType = (value, defaultValue = 0) => {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+
+        const str = String(value || "").trim().toLowerCase();
+        if (str === "daily") return 0;
+        if (str === "weekly") return 1;
+        return defaultValue;
+    };
+
+    const resolveTaskCount = (item) => {
+        const numericCandidates = [
+            item?.taskCount,
+            item?.tasksCount,
+            item?.task_count,
+            item?.tasks_count,
+            item?.totalTasks,
+            item?.totalTask,
+            item?.routineTaskCount,
+            item?.routineTasksCount,
+        ];
+
+        for (const value of numericCandidates) {
+            const parsed = Number(value);
+            if (Number.isFinite(parsed)) return parsed;
+        }
+
+        const resolveTaskArray = (value) => {
+            if (Array.isArray(value)) return value;
+            if (!value || typeof value !== "object") return null;
+
+            const nestedCandidates = [
+                value.items,
+                value.results,
+                value.data,
+                value.$values,
+            ];
+
+            for (const candidate of nestedCandidates) {
+                if (Array.isArray(candidate)) return candidate;
+            }
+
+            return null;
+        };
+
+        const listCandidates = [
+            item?.tasks,
+            item?.routineTasks,
+            item?.routine_tasks,
+            item?.routine?.tasks,
+            item?.routine?.routineTasks,
+        ];
+
+        for (const candidate of listCandidates) {
+            const resolved = resolveTaskArray(candidate);
+            if (resolved) return resolved.length;
+        }
+
+        return null;
+    };
+
     const fetchMyRoutines = async () => {
         try {
             setLoading(true);
             const res = await routineApi.getMyRoutines();
             const data = res.data?.data || res.data;
 
-            const mapped = (data || []).map((item) => ({
+            let mapped = (data || []).map((item) => ({
                 id: item.id,
                 title: item.title,
                 description: item.description,
-                repeatType: item.repeatType, // 0:Daily, 1:Weekly
+                repeatType: normalizeRepeatType(item.repeatType, 0), // 0:Daily, 1:Weekly
                 repeatDays: item.repeatDays,
-                visibility: item.visibility,
+                visibility: normalizeVisibility(item.visibility, 1),
                 categoryName: item.category?.name,
                 remindTime: item.remindTime,
-                taskCount: item.tasks?.length ?? item.routineTasks?.length ?? item.taskCount ?? 0,
+                taskCount: resolveTaskCount(item),
             }));
+
+            // Some list endpoints omit tasks/taskCount, so fetch detail for unresolved routines.
+            const unresolved = mapped.filter((item) => item.taskCount === null && item.id);
+            if (unresolved.length > 0) {
+                const detailResults = await Promise.allSettled(
+                    unresolved.map((item) => routineApi.getById(item.id))
+                );
+
+                const detailCountMap = {};
+                detailResults.forEach((result, idx) => {
+                    const routineId = unresolved[idx]?.id;
+                    if (!routineId || result.status !== 'fulfilled') return;
+
+                    const detail = result.value?.data?.data || result.value?.data || {};
+                    const detailCount = resolveTaskCount(detail);
+                    detailCountMap[routineId] = detailCount ?? 0;
+                });
+
+                mapped = mapped.map((item) => ({
+                    ...item,
+                    taskCount:
+                        item.taskCount !== null
+                            ? item.taskCount
+                            : (detailCountMap[item.id] ?? 0),
+                }));
+            } else {
+                mapped = mapped.map((item) => ({
+                    ...item,
+                    taskCount: item.taskCount ?? 0,
+                }));
+            }
 
             setRoutines(mapped);
         } catch (err) {
@@ -53,14 +161,15 @@ export default function SelfRoutinePage() {
     };
 
     const visibilityLabel = (value) => {
-        if (value === 0) return "Private";
-        if (value === 1) return "Public";
-        if (value === 2) return "Subscribers";
+        const normalized = normalizeVisibility(value, -1);
+        if (normalized === 0) return "Private";
+        if (normalized === 1) return "Public";
+        if (normalized === 2) return "Subscribers";
         return "Unknown";
     };
 
     const repeatLabel = (repeatType, repeatDays) => {
-        if (repeatType === 1) return `Weekly: ${repeatDays || "—"}`;
+        if (normalizeRepeatType(repeatType, 0) === 1) return `Weekly: ${repeatDays || "—"}`;
         return "Daily";
     };
 

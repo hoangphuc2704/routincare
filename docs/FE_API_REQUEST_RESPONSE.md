@@ -763,37 +763,8 @@ Webhook response:
 
 - GET `/api/payments/me`
 - GET `/api/payments` (Admin)
-- GET `/api/payments/return`
 
 Response data: list `PaymentHistoryDto`.
-
-Payment return verify query (PayOS redirect):
-
-Luu y cau hinh PayOS:
-
-- ReturnUrl nen tro ve FE route `/payment/success`
-- CancelUrl nen tro ve FE route `/payment/cancel`
-- FE route doc query params roi goi lai backend endpoint `GET /api/payments/return`
-
-- `orderCode` (required)
-- `status` (optional, vd: `PAID`)
-- `code` (optional, vd: `00`)
-- `cancel` (optional, `true` neu user cancel)
-
-Response `200` success:
-
-```json
-{
-  "success": true,
-  "data": {
-    "transactionId": "guid",
-    "status": "Success",
-    "amount": 49000,
-    "planName": "Premium Monthly"
-  },
-  "message": "Payment verified and subscription activated."
-}
-```
 
 ## 13. Media API (`/api/media`)
 

@@ -3,7 +3,7 @@
 
 ### ReactNative ###
 # React Native Stack Base
-
+node_modules/
 .expo
 __generated__
 

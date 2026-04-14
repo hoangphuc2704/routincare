@@ -6,8 +6,11 @@ const chatApi = {
   getConversations: () => axiosClient.get('/api/chats/conversations'),
   getMessages: (conversationId, params) =>
     axiosClient.get(`/api/chats/conversations/${conversationId}/messages`, { params }),
-  sendMessage: (conversationId, data) =>
-    axiosClient.post(`/api/chats/conversations/${conversationId}/messages`, data),
+  sendMessage: (conversationId, body) =>
+    axiosClient.post(`/api/chats/conversations/${conversationId}/messages`, {
+      type: 'Text',
+      body: body,
+    }),
   markAsRead: (conversationId, data) =>
     axiosClient.patch(`/api/chats/conversations/${conversationId}/read`, data),
   deleteMessage: (messageId) => axiosClient.delete(`/api/chats/messages/${messageId}`),
