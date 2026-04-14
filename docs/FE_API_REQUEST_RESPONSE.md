@@ -690,6 +690,42 @@ Response `200` (`CheckoutResponseDto`):
 
 Response data: `UserSubscriptionDto` hoặc list.
 
+Cancel flow cho FE (theo backend hien tai):
+
+1. Vao Subscription page -> goi `GET /api/subscriptions/me`.
+2. Hien thi toi thieu: `Status`, `EndDate`, `AutoRenew`.
+3. Nut huy chi cho phep khi:
+  - `Status` la `Active` hoac `Pending`.
+  - `AutoRenew == true`.
+4. Khi bam huy -> confirm: `Ban van dung Premium den het ngay DD/MM/YYYY`.
+5. FE goi `POST /api/subscriptions/{id}/cancel` (can `Authorization: Bearer <token>`).
+6. Sau khi thanh cong -> goi lai `GET /api/subscriptions/me` de refresh state.
+
+Hanh vi mong doi sau cancel:
+
+- Neu subscription dang `Active`: backend se tat gia han (`AutoRenew=false`), user van duoc dung den `EndDate`.
+- Neu subscription dang `Pending`: backend se huy ngay.
+
+Success envelope mau:
+
+```json
+{ "success": true, "data": true, "message": "..." }
+```
+
+Loi FE can handle:
+
+- `401`: chua dang nhap hoac token het han.
+- `403`: user khong duoc phep thao tac subscription nay.
+- `404`: khong tim thay subscription.
+- `400`: trang thai hien tai khong cho phep huy.
+
+Dong bo UI sau thanh toan thanh cong:
+
+1. Subscription page can refresh `GET /api/subscriptions/me` sau verify return.
+2. Profile page can goi `GET /api/subscriptions/me` de render plan hien tai, khong hardcode Free.
+3. Neu subscription hien tai la `Active`, FE nen disable nut mua cho plan dang active (text: `Dang su dung`).
+4. Local user cache (`localStorage.user`) nen duoc cap nhat `IsPremium=true` khi subscription `Active` de cac widget/hub khac dong bo nhanh.
+
 ### PayOS webhook
 
 - POST `/api/subscriptions/webhook/payos`

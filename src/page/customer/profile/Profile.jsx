@@ -1,12 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, UserCircle, KeyRound, PencilLine } from 'lucide-react';
+import {
+  ArrowLeft,
+  KeyRound,
+  PencilLine,
+  Activity,
+  Flame,
+  Target,
+  Trophy,
+  Settings,
+  LayoutDashboard,
+  Crown,
+  Archive,
+  Clock3,
+  Eye,
+  LogOut,
+} from 'lucide-react';
 import { message } from 'antd';
 import userApi from '../../../api/userApi';
 import authApi from '../../../api/authApi';
 import analyticsApi from '../../../api/analyticsApi';
 import routineApi from '../../../api/routineApi';
 import mediaApi from '../../../api/mediaApi';
+
+import subscriptionApi from '../../../api/subscriptionApi';
+
 import {
   Activity,
   Flame,
@@ -20,9 +38,27 @@ import {
   Eye,
   LogOut,
 } from 'lucide-react';
+
 import { clearAllAuth, getRefreshToken } from '../../../utils/tokenService';
 import Heatmap from '../../../components/Heatmap';
 import UserHeader from '../../../components/UserHeader';
+
+const normalizeSubscriptionStatus = (rawStatus) => {
+  if (rawStatus === 1 || String(rawStatus).toLowerCase() === 'active') return 'Active';
+  if (rawStatus === 0 || String(rawStatus).toLowerCase() === 'pending') return 'Pending';
+  if (rawStatus === 2 || ['canceled', 'cancelled'].includes(String(rawStatus).toLowerCase()))
+    return 'Cancelled';
+  if (rawStatus === 3 || String(rawStatus).toLowerCase() === 'expired') return 'Expired';
+  if (rawStatus === 4 || String(rawStatus).toLowerCase() === 'failed') return 'Failed';
+  return 'Unknown';
+};
+
+const formatSubscriptionDate = (value) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('vi-VN');
+};
 
 function Profile() {
   const navigate = useNavigate();
@@ -50,6 +86,8 @@ function Profile() {
   const [routinesLoading, setRoutinesLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [currentSubscription, setCurrentSubscription] = useState(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -70,6 +108,18 @@ function Profile() {
         }
 
         setProfile(data);
+
+        if (!userId && data) {
+          const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const nextUser = {
+            ...storedUser,
+            ...data,
+            userId: data.userId || data.id || storedUser.userId,
+            id: data.id || data.userId || storedUser.id,
+            IsPremium: Boolean(data.IsPremium ?? data.isPremium ?? storedUser.IsPremium),
+          };
+          localStorage.setItem('user', JSON.stringify(nextUser));
+        }
       } catch (err) {
         message.error(err.response?.data?.message || 'Không tải được thông tin');
         navigate('/home');
@@ -99,9 +149,30 @@ function Profile() {
       }
     };
 
+    const fetchCurrentSubscription = async () => {
+      try {
+        setSubscriptionLoading(true);
+        const res = await subscriptionApi.getMe();
+        const data = res.data?.data || res.data;
+        const normalized = Array.isArray(data) ? data[0] : data;
+        setCurrentSubscription(normalized || null);
+
+        const status = normalizeSubscriptionStatus(normalized?.status);
+        const isPremium = status === 'Active';
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem('user', JSON.stringify({ ...storedUser, IsPremium: isPremium }));
+      } catch (err) {
+        console.error('Failed to fetch current subscription on profile:', err);
+        setCurrentSubscription(null);
+      } finally {
+        setSubscriptionLoading(false);
+      }
+    };
+
     if (isMe) {
       fetchAnalytics();
       fetchHeatmap();
+      fetchCurrentSubscription();
     }
     fetchUser();
 
@@ -115,6 +186,20 @@ function Profile() {
     window.addEventListener('friendStatusChanged', handleFriendStatusChange);
     return () => window.removeEventListener('friendStatusChanged', handleFriendStatusChange);
   }, [userId, isMe, navigate]);
+
+  const subscriptionStatus = normalizeSubscriptionStatus(currentSubscription?.status);
+  const subscriptionPlanName =
+    currentSubscription?.planName ||
+    currentSubscription?.name ||
+    (subscriptionStatus === 'Active' ? 'Premium Plan' : 'Free Plan');
+  const subscriptionEndDate = currentSubscription?.endDate || currentSubscription?.expiresAt;
+  const isPremiumActive = subscriptionStatus === 'Active';
+  let subscriptionDescription = 'Your current subscription';
+  if (isPremiumActive) {
+    subscriptionDescription = `Hiệu lực đến ${formatSubscriptionDate(subscriptionEndDate)}`;
+  } else if (subscriptionStatus === 'Pending') {
+    subscriptionDescription = 'Subscription đang chờ kích hoạt';
+  }
 
   useEffect(() => {
     const fetchRoutines = async () => {
@@ -489,6 +574,26 @@ function Profile() {
                   <Crown className="text-lime-400" size={24} />
                 </div>
                 <div>
+                  <h3 className="font-bold text-sm">
+                    {subscriptionLoading ? 'Đang tải...' : subscriptionPlanName}
+                  </h3>
+                  <p className="text-[10px] text-neutral-500 uppercase tracking-tighter">
+                    {subscriptionDescription}
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/customer/subscriptions"
+                className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
+              >
+                {isPremiumActive ? 'MANAGE PLAN' : 'UPGRADE PRO'}
+              </Link>
+
+              {/* <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-lime-400/10 rounded-xl flex items-center justify-center">
+                  <Crown className="text-lime-400" size={24} />
+                </div>
+                <div>
                   <h3 className="font-bold text-sm">Free Plan</h3>
                   <p className="text-[10px] text-neutral-500 uppercase tracking-tighter">
                     Your current subscription
@@ -500,7 +605,7 @@ function Profile() {
                 className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
               >
                 UPGRADE PRO
-              </Link>
+              </Link> */}
             </div>
 
             {/* Placeholder for Heatmap */}
