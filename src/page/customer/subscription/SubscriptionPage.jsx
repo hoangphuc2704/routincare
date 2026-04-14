@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BadgeCheck, Crown, ExternalLink, History, Loader2, Wallet, XCircle } from 'lucide-react';
-import { message } from 'antd';
+import { message, Modal } from 'antd';
 import BottomNav from '../../../components/BottomNav';
 import subscriptionApi from '../../../api/subscriptionApi';
 import paymentApi from '../../../api/paymentApi';
@@ -19,6 +19,7 @@ const STATUS_STYLES = {
   Pending: 'bg-amber-500/15 text-amber-300 border-amber-400/40',
   Active: 'bg-lime-500/15 text-lime-300 border-lime-400/40',
   Canceled: 'bg-zinc-500/15 text-zinc-300 border-zinc-400/30',
+  Cancelled: 'bg-zinc-500/15 text-zinc-300 border-zinc-400/30',
   Expired: 'bg-red-500/15 text-red-300 border-red-400/30',
   Failed: 'bg-red-500/15 text-red-300 border-red-400/30',
 };
@@ -34,6 +35,50 @@ const getStatusLabel = (raw) => {
   return 'Unknown';
 };
 
+const normalizeSubscriptionStatus = (raw) => {
+  const label = getStatusLabel(raw);
+  const lower = String(label).toLowerCase();
+  if (lower === 'active') return 'Active';
+  if (lower === 'pending') return 'Pending';
+  if (lower === 'cancelled' || lower === 'canceled') return 'Cancelled';
+  if (lower === 'expired') return 'Expired';
+  if (lower === 'failed') return 'Failed';
+  return label;
+};
+
+const getAutoRenewValue = (subscription) => {
+  if (!subscription) return null;
+  if (typeof subscription.autoRenew === 'boolean') return subscription.autoRenew;
+  if (typeof subscription.isAutoRenew === 'boolean') return subscription.isAutoRenew;
+  if (typeof subscription.autoRenewEnabled === 'boolean') return subscription.autoRenewEnabled;
+  return null;
+};
+
+const getCancelErrorMessage = (error) => {
+  const status = error.response?.status;
+  if (status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  if (status === 403) return 'Bạn không có quyền thao tác subscription này.';
+  if (status === 404) return 'Không tìm thấy subscription.';
+  if (status === 400) return 'Trạng thái subscription hiện tại không cho phép hủy.';
+  return error.response?.data?.error?.message || error.response?.data?.message || 'Không thể hủy subscription';
+};
+
+const getCancelSuccessMessage = (subscription) => {
+  const status = normalizeSubscriptionStatus(subscription?.status);
+  const autoRenew = getAutoRenewValue(subscription);
+  const endDate = subscription?.endDate || subscription?.expiresAt;
+
+  if (status === 'Active' && autoRenew === false) {
+    return `Đã tắt gia hạn. Bạn vẫn dùng Premium đến ${formatDate(endDate)}.`;
+  }
+
+  if (status === 'Cancelled') {
+    return 'Đã hủy subscription.';
+  }
+
+  return 'Hủy subscription thành công.';
+};
+
 const formatCurrency = (value) => {
   const amount = toNumber(value, 0);
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
@@ -44,6 +89,13 @@ const formatDateTime = (value) => {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleString('vi-VN');
+};
+
+const formatDate = (value) => {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('vi-VN');
 };
 
 export default function SubscriptionPage() {
@@ -150,7 +202,18 @@ export default function SubscriptionPage() {
     fetchPayments();
   }, []);
 
-  const activeStatus = getStatusLabel(currentSubscription?.status);
+  const activeStatus = normalizeSubscriptionStatus(currentSubscription?.status);
+  const autoRenew = getAutoRenewValue(currentSubscription);
+  const hasCurrentSubscription = Boolean(currentSubscription);
+  let autoRenewText = '—';
+  if (autoRenew === true) autoRenewText = 'true';
+  if (autoRenew === false) autoRenewText = 'false';
+  const canCancelSubscription = (activeStatus === 'Active' || activeStatus === 'Pending') && autoRenew === true;
+  let cancelButtonText = 'Đã tắt gia hạn';
+  if (canCancelSubscription) cancelButtonText = 'Hủy gói hiện tại';
+  if (cancelLoading) cancelButtonText = 'Đang hủy...';
+  const currentPlanId = String(currentSubscription?.planId || currentSubscription?.id || '');
+  const hasActiveSubscription = activeStatus === 'Active';
 
   useEffect(() => {
     if (activeStatus === 'Active') {
@@ -338,17 +401,37 @@ export default function SubscriptionPage() {
       return;
     }
 
-    if (!globalThis.confirm('Bạn chắc chắn muốn hủy gói hiện tại?')) return;
+    if (!canCancelSubscription) {
+      message.info(autoRenew === false ? 'Đã tắt gia hạn cho gói hiện tại' : 'Trạng thái hiện tại không thể hủy');
+      return;
+    }
+
+    const endDate = currentSubscription?.endDate || currentSubscription?.expiresAt;
+    const endDateText = formatDate(endDate);
+
+    const confirmed = await new Promise((resolve) => {
+      Modal.confirm({
+        title: 'Xác nhận hủy subscription',
+        content: `Bạn vẫn dùng Premium đến hết ngày ${endDateText}.`,
+        okText: 'Xác nhận hủy',
+        cancelText: 'Không',
+        okButtonProps: { danger: true },
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
+
+    if (!confirmed) return;
 
     try {
       setCancelLoading(true);
       await subscriptionApi.cancel(subscriptionId);
-      message.success('Đã gửi yêu cầu hủy gói');
-      fetchCurrentSubscription();
+      const refreshedSubscription = await fetchCurrentSubscription();
       fetchPayments();
+      message.success(getCancelSuccessMessage(refreshedSubscription));
     } catch (err) {
       console.error('Cancel subscription failed:', err);
-      message.error(err.response?.data?.message || 'Không thể hủy subscription');
+      message.error(getCancelErrorMessage(err));
     } finally {
       setCancelLoading(false);
     }
@@ -411,9 +494,7 @@ export default function SubscriptionPage() {
             {subscriptionLoading && <Loader2 size={16} className="animate-spin text-zinc-500" />}
           </div>
 
-          {!currentSubscription ? (
-            <p className="text-sm text-zinc-500">Bạn chưa có gói active.</p>
-          ) : (
+          {hasCurrentSubscription ? (
             <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-black to-black p-4 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-white">
@@ -430,17 +511,43 @@ export default function SubscriptionPage() {
                 <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Bắt đầu: {formatDateTime(currentSubscription.startDate || currentSubscription.startedAt)}</p>
                 <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Kết thúc: {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}</p>
               </div>
-              {activeStatus === 'Active' && (
+              <div className="text-xs text-zinc-300 grid grid-cols-1 md:grid-cols-3 gap-2">
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Status: {activeStatus}</p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">EndDate: {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}</p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">AutoRenew: {autoRenewText}</p>
+              </div>
+
+              {activeStatus === 'Active' && autoRenew === false && (
+                <p className="mt-2 text-xs rounded-lg border border-amber-400/40 bg-amber-500/10 text-amber-200 px-3 py-2">
+                  Gia hạn đã tắt - còn hiệu lực đến {formatDate(currentSubscription.endDate || currentSubscription.expiresAt)}.
+                </p>
+              )}
+
+              {activeStatus === 'Cancelled' && (
+                <p className="mt-2 text-xs rounded-lg border border-zinc-400/30 bg-zinc-500/10 text-zinc-200 px-3 py-2">
+                  Đã hủy gói.
+                </p>
+              )}
+
+              {(activeStatus === 'Active' || activeStatus === 'Pending') && (
                 <button
                   onClick={handleCancelSubscription}
-                  disabled={cancelLoading}
+                  disabled={cancelLoading || !canCancelSubscription}
                   className="mt-2 px-3 py-2 rounded-lg border border-red-400/40 text-red-300 text-sm hover:bg-red-500/10 transition-all disabled:opacity-60 inline-flex items-center gap-2"
                 >
                   <XCircle size={14} />
-                  {cancelLoading ? 'Đang hủy...' : 'Hủy gói hiện tại'}
+                  {cancelButtonText}
                 </button>
               )}
+
+              {activeStatus === 'Active' && (
+                <p className="text-xs text-zinc-400 mt-1">
+                  Bạn đang dùng Premium đến {formatDate(currentSubscription.endDate || currentSubscription.expiresAt)}. Hủy sẽ chỉ tắt tự động gia hạn.
+                </p>
+              )}
             </div>
+          ) : (
+            <p className="text-sm text-zinc-500">Bạn chưa có gói active.</p>
           )}
         </section>
 
@@ -466,6 +573,10 @@ export default function SubscriptionPage() {
               {sortedPlans.map((plan) => {
                 const planId = plan.id || plan.planId;
                 const isLoading = checkoutLoadingId === planId;
+                const isCurrentActivePlan = hasActiveSubscription && String(planId || '') === currentPlanId;
+                const checkoutDisabled = isLoading || isCurrentActivePlan;
+                let checkoutButtonLabel = 'Thanh toán ngay';
+                if (isCurrentActivePlan) checkoutButtonLabel = 'Đang sử dụng';
                 return (
                   <div key={planId} className="rounded-2xl p-[1px] bg-gradient-to-b from-lime-400/40 to-white/10 shadow-[0_10px_60px_-50px_rgba(190,242,100,0.6)]">
                     <div className="h-full rounded-2xl bg-[#0f0f0f] p-4 flex flex-col gap-3 border border-white/5">
@@ -488,7 +599,7 @@ export default function SubscriptionPage() {
                         </button>
                         <button
                           onClick={() => handleCheckout(planId)}
-                          disabled={isLoading}
+                          disabled={checkoutDisabled}
                           className="w-1/2 rounded-xl bg-lime-400 text-black font-bold py-2.5 text-sm hover:bg-lime-300 transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
                         >
                           {isLoading ? (
@@ -498,7 +609,7 @@ export default function SubscriptionPage() {
                             </>
                           ) : (
                             <>
-                              Thanh toán ngay
+                              {checkoutButtonLabel}
                               <ExternalLink size={14} />
                             </>
                           )}
