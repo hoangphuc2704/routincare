@@ -75,7 +75,7 @@ export default function Dashboard() {
       {/* Quick Actions Section */}
       <div>
         <h2 className="text-2xl font-bold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <QuickActionButton
             label="Manage Users"
             icon="👤"
@@ -85,6 +85,11 @@ export default function Dashboard() {
             label="Manage Categories"
             icon="📂"
             onClick={() => navigate('/admin/categories')}
+          />
+          <QuickActionButton
+            label="Revenue Analytics"
+            icon="💹"
+            onClick={() => navigate('/admin/revenue')}
           />
         </div>
       </div>

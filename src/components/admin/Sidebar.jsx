@@ -10,6 +10,7 @@ export default function Sidebar() {
     { label: 'Dashboard', path: '/admin' },
     { label: 'Categories', path: '/admin/categories' },
     { label: 'Users', path: '/admin/users' },
+    { label: 'Revenue Analytics', path: '/admin/revenue' },
   ];
 
   const isActive = (path) => {
