@@ -75,6 +75,14 @@ npm run lint
 - Da go tiep toan bo UI tuong tac con lai tren card feed Home (avatar/name link, bookmark button), card hien tai la read-only hoan toan.
 - Da bo hẳn cum thao tac UI/UX cho `like/comment/share` tren card feed Home; card chi con caption + thong tin thoi gian dang bai.
 - Da them nut `Copy routine` tren card feed Home; FE se goi `POST /api/Routines/:id/copy` khi post co `routineId` hop le, co loading state va thong bao ket qua.
+- Da bo sung popup `Xem truoc routine` truoc khi copy tren Home: khi bam `Copy routine`, FE goi `GET /api/Routines/:id` de hien thi title/mo ta/metadata/day du task + prepare items, nguoi dung xac nhan moi thuc hien `POST /api/Routines/:id/copy`.
+- Da polish noi dung popup xem truoc routine sang tieng Viet co dau de de hieu hon trong UX (`Xem truoc routine`, `Huy`, `Xac nhan copy`, ...).
+- Popup xem truoc routine da ho tro hien thi anh cover neu backend tra ve (`coverImageUrl`/`thumbnailUrl`/`imageUrl`), fallback ve anh tu card feed/explore neu can.
+- Da tach popup thanh component tai su dung `src/components/RoutinePreviewModal.jsx`; Home Feed va Explore routines dang dung chung mot luong preview + xac nhan copy.
+- Da redesign modal theo visual cua Home (dark gradient + accent `#d2fb05`, card border `white/10`) de dong bo layout/mau sac voi trang.
+- Da fix xung dot style AntD Modal o popup routine preview bang class-based CSS override (thay vi phu thuoc inline styles), dam bao modal luon len dung dark-theme theo Home tren moi moi truong.
+- Da cap nhat them cho AntD v6: popup routine preview dung semantic `classNames/styles` + `rootClassName`, kem CSS specificity cao (`!important`) de tranh bi token mac dinh ghi de nen trang.
+- Da chuyen popup routine preview sang custom modal overlay (portal vao `document.body`) de loai bo xung dot theme token cua AntD, dam bao layout/mau dark on dinh 100% theo Home.
 - Da fix luong `Copy routine` tren Home: bo sung mapping nhieu alias routine id tu payload post/feed (`routineId`, `originalRoutineId`, `sourceRoutineId`, nested `routine.*`, ...), kem fallback cho item dang routine entity.
 - Da fix so task tren trang `Your Routine`: bo sung map nhieu alias field task count va fallback goi `GET /api/Routines/:id` cho routine thieu du lieu trong list, giup hien thi so task chinh xac hon.
 - Da fix loi cap nhat gio nhac (`remindTime`) o trang chi tiet routine: chuan hoa format gio truoc khi submit (`HH:mm` -> `HH:mm:ss`) de backend parse TimeSpan dung, tranh loi `400 Bad Request`.
@@ -82,3 +90,5 @@ npm run lint
 - Da fix tinh trang desktop sidebar che noi dung o Routine Detail bang cach them offset trai tren man hinh `md+` (`md:pl-[96px]`).
 - Da fix hien thi sai trang thai Public/Private sau khi cap nhat routine: FE da normalize enum `visibility` (va `repeatType`) cho ca gia tri so, numeric-string (`"0"`, `"1"`) va enum-string (`"Private"`, `"Public"`, `"Daily"`, `"Weekly"`), tranh fallback nham ve `Public`.
 - Da fix hien thi tong so task bi sai o trang routine: FE nay resolve duoc task list tu nhieu response shape (array truc tiep hoac object boc `items`/`results`/`data`/`$values`) nen `tasks.length` va badge task count da dung hon.
+- Da cap nhat mapping ten nguoi tao routine tren feed Home: FE uu tien cac field moi tu backend nhu `creatorNamee`/`creatorName` (kem avatar/id creator aliases) de hien thi dung tac gia routine.
+- Da bo sung them mapping nested cho ten creator trong payload routine (`routine.creatorNamee`, `routine.creatorName`, creator object trong routine) de dam bao bai cua nguoi khac hien dung ten.

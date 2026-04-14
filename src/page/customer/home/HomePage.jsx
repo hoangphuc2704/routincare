@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import BottomNav from '../../../components/BottomNav';
 import FeedPost from '../../../components/FeedPost';
+import RoutinePreviewModal from '../../../components/RoutinePreviewModal';
 import feedApi from '../../../api/feedApi';
 import postApi from '../../../api/postApi';
 import routineApi from '../../../api/routineApi';
@@ -33,6 +35,14 @@ function unwrapItems(response) {
   if (Array.isArray(payload?.items)) return payload.items;
   if (Array.isArray(payload?.data)) return payload.data;
   return [];
+}
+
+function unwrapObject(response) {
+  const payload = response?.data?.data ?? response?.data ?? null;
+  if (!payload) return null;
+  if (Array.isArray(payload)) return payload[0] || null;
+  if (payload?.data && !Array.isArray(payload.data)) return payload.data;
+  return payload;
 }
 
 function getCurrentUserSnapshot() {
@@ -108,8 +118,25 @@ function normalizePostItem(item, index, options = {}) {
   const { canInteract = true } = options;
   const me = getCurrentUserSnapshot();
   const user = item?.user || item?.owner || item?.author || {};
+  const creator = item?.creator || item?.routineCreator || {};
+  const routine = item?.routine || item?.routineDetail || item?.originalRoutine || {};
+  const routineCreator = routine?.creator || routine?.owner || routine?.author || {};
   const rawPostId = item?.id || item?.postId || item?.post_id || null;
   const normalizedUserId =
+    creator?.id ||
+    creator?.userId ||
+    creator?.user_id ||
+    routineCreator?.id ||
+    routineCreator?.userId ||
+    routineCreator?.user_id ||
+    item?.creatorId ||
+    item?.creator_id ||
+    item?.routineCreatorId ||
+    item?.routine_creator_id ||
+    routine?.creatorId ||
+    routine?.creator_id ||
+    routine?.ownerId ||
+    routine?.owner_id ||
     user?.id ||
     user?.userId ||
     user?.user_id ||
@@ -124,6 +151,28 @@ function normalizePostItem(item, index, options = {}) {
     null;
 
   const rawName =
+    item?.creatorNamee ||
+    item?.creatornamee ||
+    item?.creatorName ||
+    item?.creator_name ||
+    item?.routineCreatorName ||
+    item?.routine_creator_name ||
+    routine?.creatorNamee ||
+    routine?.creatornamee ||
+    routine?.creatorName ||
+    routine?.creator_name ||
+    routine?.ownerName ||
+    routine?.owner_name ||
+    routineCreator?.fullName ||
+    routineCreator?.full_name ||
+    routineCreator?.name ||
+    routineCreator?.userName ||
+    routineCreator?.username ||
+    creator?.fullName ||
+    creator?.full_name ||
+    creator?.name ||
+    creator?.userName ||
+    creator?.username ||
     user?.fullName ||
     user?.full_name ||
     user?.name ||
@@ -144,6 +193,23 @@ function normalizePostItem(item, index, options = {}) {
     null;
 
   const rawAvatar =
+    item?.creatorAvatar ||
+    item?.creatorAvatarUrl ||
+    item?.creator_avatar_url ||
+    item?.routineCreatorAvatar ||
+    item?.routineCreatorAvatarUrl ||
+    routine?.creatorAvatar ||
+    routine?.creatorAvatarUrl ||
+    routine?.creator_avatar_url ||
+    routine?.ownerAvatar ||
+    routine?.ownerAvatarUrl ||
+    routine?.owner_avatar_url ||
+    routineCreator?.avatarUrl ||
+    routineCreator?.avatar ||
+    routineCreator?.avatar_url ||
+    creator?.avatarUrl ||
+    creator?.avatar ||
+    creator?.avatar_url ||
     user?.avatarUrl ||
     user?.avatar ||
     user?.avatar_url ||
@@ -258,12 +324,92 @@ function splitExploreItems(items) {
   return { routines, users };
 }
 
+function normalizeRoutinePreview(response, post) {
+  const payload = unwrapObject(response);
+  const routine = payload?.routine || payload || {};
+
+  const tasksRaw =
+    routine?.tasks ||
+    routine?.taskDtos ||
+    routine?.taskDTOs ||
+    routine?.taskList ||
+    [];
+
+  const prepareRaw =
+    routine?.prepareItems ||
+    routine?.prepareItemDtos ||
+    routine?.prepareItemDTOs ||
+    [];
+
+  const tasks = Array.isArray(tasksRaw)
+    ? tasksRaw.map((task, index) => ({
+        id: task?.id || task?.taskId || `task-${index}`,
+        title: task?.title || task?.name || task?.taskName || `Task ${index + 1}`,
+        note: task?.description || task?.note || '',
+        tips: task?.tips || '',
+        type: task?.type || task?.taskType || task?.unitType || null,
+        targetValue: task?.targetValue ?? task?.target ?? null,
+        unitName: task?.unitName || task?.unit || null,
+        difficulty: task?.difficulty || null,
+        estimatedMinutes: task?.estimatedMinutes ?? null,
+        restAfterSeconds: task?.restAfterSeconds ?? null,
+        prepareItems: Array.isArray(task?.prepareItems)
+          ? task.prepareItems.map((item, itemIndex) => ({
+              id: item?.id || item?.prepareItemId || `task-${index}-prepare-${itemIndex}`,
+              title: item?.title || item?.name || item?.itemName || `Vật dụng ${itemIndex + 1}`,
+              description: item?.description || '',
+              isRequired: item?.isRequired,
+              category: item?.category,
+              purchaseUrl: item?.purchaseUrl || null,
+            }))
+          : [],
+      }))
+    : [];
+
+  const prepareItems = Array.isArray(prepareRaw)
+    ? prepareRaw.map((item, index) => ({
+        id: item?.id || item?.prepareItemId || `prepare-${index}`,
+        title: item?.title || item?.name || item?.itemName || `Prepare ${index + 1}`,
+      }))
+    : [];
+
+  return {
+    id: routine?.id || routine?.routineId || post?.routineId,
+    title: routine?.title || routine?.name || post?.caption || 'Routine',
+    description: routine?.description || post?.caption || '',
+    image:
+      routine?.coverImageUrl ||
+      routine?.thumbnailUrl ||
+      routine?.imageUrl ||
+      routine?.image ||
+      post?.image ||
+      null,
+    taskCount: routine?.taskCount ?? tasks.length,
+    prepareCount: routine?.prepareItemsCount ?? prepareItems.length,
+    repeatType: routine?.repeatType ?? null,
+    repeatDays: routine?.repeatDays || null,
+    remindTime: routine?.remindTime || null,
+    visibility: routine?.visibility ?? null,
+    categoryName: routine?.categoryName || routine?.category?.name || null,
+    createdAt: routine?.createdAt || null,
+    updatedAt: routine?.updatedAt || null,
+    tasks,
+    prepareItems,
+    rawRoutine: routine,
+  };
+}
+
 export default function Homepage() {
   const [activeTab, setActiveTab] = useState(TAB.FEED);
   const [feedPosts, setFeedPosts] = useState([]);
   const [exploreRoutines, setExploreRoutines] = useState([]);
   const [exploreUsers, setExploreUsers] = useState([]);
   const [copyLoadingByPost, setCopyLoadingByPost] = useState({});
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewSubmitting, setPreviewSubmitting] = useState(false);
+  const [selectedCopyTarget, setSelectedCopyTarget] = useState(null);
+  const [previewRoutine, setPreviewRoutine] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -355,9 +501,9 @@ export default function Homepage() {
     [exploreRoutines.length, exploreUsers.length]
   );
 
-  const handleCopyRoutine = useCallback(async (post) => {
-    const postId = post?.id;
-    const routineId = post?.routineId;
+  const handleOpenCopyPreview = useCallback(async (target) => {
+    const postId = target?.id;
+    const routineId = target?.routineId;
 
     if (!postId || !routineId) {
       message.info('Post nay chua co routine de copy.');
@@ -366,16 +512,52 @@ export default function Homepage() {
 
     if (copyLoadingByPost[postId]) return;
 
+    setSelectedCopyTarget(target);
+    setPreviewRoutine(null);
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+
+    try {
+      const detailRes = await routineApi.getById(routineId);
+      setPreviewRoutine(normalizeRoutinePreview(detailRes, target));
+    } catch (err) {
+      setPreviewRoutine(normalizeRoutinePreview(null, target));
+      message.error(err?.response?.data?.message || 'Khong the tai chi tiet routine luc nay.');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [copyLoadingByPost]);
+
+  const handleClosePreview = useCallback(() => {
+    if (previewSubmitting) return;
+    setPreviewOpen(false);
+    setSelectedCopyTarget(null);
+    setPreviewRoutine(null);
+    setPreviewLoading(false);
+  }, [previewSubmitting]);
+
+  const handleCopyRoutine = useCallback(async () => {
+    const postId = selectedCopyTarget?.id;
+    const routineId = selectedCopyTarget?.routineId;
+
+    if (!postId || !routineId || previewSubmitting) return;
+
+    setPreviewSubmitting(true);
+
     setCopyLoadingByPost((prev) => ({ ...prev, [postId]: true }));
     try {
       await routineApi.copy(routineId);
       message.success('Copy routine thanh cong.');
+      setPreviewOpen(false);
+      setSelectedCopyTarget(null);
+      setPreviewRoutine(null);
     } catch (err) {
       message.error(err?.response?.data?.message || 'Khong the copy routine luc nay.');
     } finally {
+      setPreviewSubmitting(false);
       setCopyLoadingByPost((prev) => ({ ...prev, [postId]: false }));
     }
-  }, [copyLoadingByPost]);
+  }, [previewSubmitting, selectedCopyTarget]);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_15%_20%,#263328_0%,#0a0a0a_48%,#000_100%)] text-white">
@@ -430,7 +612,7 @@ export default function Homepage() {
                   key={post.id}
                   post={post}
                   copyLoading={Boolean(copyLoadingByPost[post.id])}
-                  onCopyRoutine={() => handleCopyRoutine(post)}
+                  onCopyRoutine={() => handleOpenCopyPreview(post)}
                 />
               ))}
             </div>
@@ -463,7 +645,24 @@ export default function Homepage() {
                       <p className="text-sm text-white/65 mt-1 line-clamp-2">
                         {routine.description || 'Routine công khai đang thu hút nhiều người dùng.'}
                       </p>
-                      <p className="text-xs text-white/60 mt-3">{routine.copies} lượt copy</p>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <p className="text-xs text-white/60">{routine.copies} lượt copy</p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleOpenCopyPreview({
+                              id: `explore-${routine.id}`,
+                              routineId: routine.id,
+                              caption: routine.description,
+                              image: routine.image,
+                            })
+                          }
+                          disabled={Boolean(copyLoadingByPost[`explore-${routine.id}`])}
+                          className="inline-flex items-center rounded-full border border-[#d2fb05]/40 px-3 py-1.5 text-xs font-semibold text-[#d2fb05] hover:bg-[#d2fb05]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {copyLoadingByPost[`explore-${routine.id}`] ? 'Dang copy...' : 'Copy routine'}
+                        </button>
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -505,6 +704,16 @@ export default function Homepage() {
           </div>
         )}
       </main>
+
+      <RoutinePreviewModal
+        open={previewOpen}
+        loading={previewLoading}
+        submitting={previewSubmitting}
+        routine={previewRoutine}
+        canCopy={Boolean(selectedCopyTarget?.routineId)}
+        onCancel={handleClosePreview}
+        onConfirm={handleCopyRoutine}
+      />
 
       <BottomNav activeItem="home" />
     </div>
