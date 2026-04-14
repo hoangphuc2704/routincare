@@ -25,19 +25,7 @@ import mediaApi from '../../../api/mediaApi';
 
 import subscriptionApi from '../../../api/subscriptionApi';
 
-import {
-  Activity,
-  Flame,
-  Target,
-  Trophy,
-  Settings,
-  LayoutDashboard,
-  Crown,
-  Archive,
-  Clock3,
-  Eye,
-  LogOut,
-} from 'lucide-react';
+// import {} from 'lucide-react';
 
 import { clearAllAuth, getRefreshToken } from '../../../utils/tokenService';
 import Heatmap from '../../../components/Heatmap';

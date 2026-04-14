@@ -23,6 +23,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import Dashboard from './page/admin/Dashboard';
 import CategoryList from './page/admin/categories/CategoryList';
 import UserList from './page/admin/users/UserList';
+import RevenueDashboard from './page/RevenueDashboard';
 
 // Protected Route component for admin pages
 function ProtectedAdminRoute({ element }) {
@@ -68,6 +69,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="categories" element={<CategoryList />} />
           <Route path="users" element={<UserList />} />
+          <Route path="revenue" element={<RevenueDashboard />} />
         </Route>
 
         {/* Catch-all */}
