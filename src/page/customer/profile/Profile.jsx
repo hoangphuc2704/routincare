@@ -1,21 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowLeft,
-  KeyRound,
-  PencilLine,
-  Activity,
-  Flame,
-  Target,
-  Trophy,
-  Settings,
-  LayoutDashboard,
-  Crown,
-  Archive,
-  Clock3,
-  Eye,
-  LogOut,
-} from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Settings, LayoutDashboard, Archive } from 'lucide-react';
 import { message } from 'antd';
 import userApi from '../../../api/userApi';
 import authApi from '../../../api/authApi';
@@ -28,25 +13,17 @@ import subscriptionApi from '../../../api/subscriptionApi';
 // import {} from 'lucide-react';
 
 import { clearAllAuth, getRefreshToken } from '../../../utils/tokenService';
-import Heatmap from '../../../components/Heatmap';
 import UserHeader from '../../../components/UserHeader';
-
-const normalizeSubscriptionStatus = (rawStatus) => {
-  if (rawStatus === 1 || String(rawStatus).toLowerCase() === 'active') return 'Active';
-  if (rawStatus === 0 || String(rawStatus).toLowerCase() === 'pending') return 'Pending';
-  if (rawStatus === 2 || ['canceled', 'cancelled'].includes(String(rawStatus).toLowerCase()))
-    return 'Cancelled';
-  if (rawStatus === 3 || String(rawStatus).toLowerCase() === 'expired') return 'Expired';
-  if (rawStatus === 4 || String(rawStatus).toLowerCase() === 'failed') return 'Failed';
-  return 'Unknown';
-};
-
-const formatSubscriptionDate = (value) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('vi-VN');
-};
+import DashboardScreen from './components/DashboardScreen';
+import RoutinesScreen from './components/RoutinesScreen';
+import SettingsScreen from './components/SettingsScreen';
+import {
+  formatSubscriptionDate,
+  getCompletionPercent,
+  isValidUrl,
+  normalizeSubscriptionStatus,
+  toNumber,
+} from './utils/profileHelpers';
 
 function Profile() {
   const navigate = useNavigate();
@@ -267,46 +244,11 @@ function Profile() {
     fetchRoutines();
   }, [activeTab, isMe, userId]);
 
-  const visibilityLabel = (value) => {
-    if (value === 0) return 'Private';
-    if (value === 1) return 'Public';
-    if (value === 2) return 'Subscribers';
-    return 'Unknown';
-  };
-
-  const repeatLabel = (repeatType, repeatDays) => {
-    if (repeatType === 1) return `Weekly: ${repeatDays || '—'}`;
-    return 'Daily';
-  };
-
-  const toNumber = (value, fallback = 0) => {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : fallback;
-  };
-
-  const getCompletionPercent = (overview) => {
-    // Support both old and new API field names.
-    const raw =
-      overview?.completionRate ?? overview?.completion_rate_7d ?? overview?.completionRate7d ?? 0;
-    const value = toNumber(raw, 0);
-    return value <= 1 ? Math.round(value * 100) : Math.round(value);
-  };
-
   const analyticsStats = {
     totalRoutines: toNumber(analytics?.totalRoutines ?? analytics?.total_routines),
     currentStreak: toNumber(analytics?.currentStreak ?? analytics?.current_streak),
     longestStreak: toNumber(analytics?.longestStreak ?? analytics?.longest_streak),
     completionPercent: getCompletionPercent(analytics),
-  };
-
-  const isValidUrl = (value) => {
-    if (!value) return true;
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    } catch (err) {
-      return false;
-    }
   };
 
   const handleProfileChange = (e) => {
@@ -526,370 +468,40 @@ function Profile() {
         </div>
 
         {activeTab === 'dashboard' && isMe && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Stats Overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard
-                title="Routines"
-                value={analyticsStats.totalRoutines}
-                icon={<Target className="text-blue-400" size={24} />}
-                sub="Active"
-              />
-              <StatCard
-                title="Streak"
-                value={analyticsStats.currentStreak}
-                icon={<Flame className="text-orange-500" size={24} />}
-                sub="Days"
-              />
-              <StatCard
-                title="Completion"
-                value={`${analyticsStats.completionPercent}%`}
-                icon={<Activity className="text-lime-400" size={24} />}
-                sub="Rate"
-              />
-              <StatCard
-                title="Best Streak"
-                value={analyticsStats.longestStreak}
-                icon={<Trophy className="text-yellow-400" size={24} />}
-                sub="Record"
-              />
-            </div>
-
-            {/* Subscription Status */}
-            <div className="p-4 bg-gradient-to-r from-zinc-900 to-black rounded-2xl border border-lime-400/20 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-lime-400/10 rounded-xl flex items-center justify-center">
-                  <Crown className="text-lime-400" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">
-                    {subscriptionLoading ? 'Đang tải...' : subscriptionPlanName}
-                  </h3>
-                  <p className="text-[10px] text-neutral-500 uppercase tracking-tighter">
-                    {subscriptionDescription}
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/customer/subscriptions"
-                className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
-              >
-                {isPremiumActive ? 'MANAGE PLAN' : 'UPGRADE PRO'}
-              </Link>
-
-              {/* <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-lime-400/10 rounded-xl flex items-center justify-center">
-                  <Crown className="text-lime-400" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">Free Plan</h3>
-                  <p className="text-[10px] text-neutral-500 uppercase tracking-tighter">
-                    Your current subscription
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/customer/subscriptions"
-                className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
-              >
-                UPGRADE PRO
-              </Link> */}
-            </div>
-
-            {/* Placeholder for Heatmap */}
-            <div className="p-6 bg-neutral-900 rounded-2xl border border-white/5">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold flex items-center gap-2">
-                  <Activity size={20} className="text-lime-400" />
-                  Activity Log
-                </h3>
-                <span className="text-xs text-neutral-500">Last 12 months</span>
-              </div>
-              <Heatmap data={heatmapData} />
-            </div>
-          </div>
+          <DashboardScreen
+            analyticsStats={analyticsStats}
+            subscriptionLoading={subscriptionLoading}
+            subscriptionPlanName={subscriptionPlanName}
+            subscriptionDescription={subscriptionDescription}
+            isPremiumActive={isPremiumActive}
+            heatmapData={heatmapData}
+          />
         )}
 
         {activeTab === 'routines' && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {routinesLoading ? (
-              <div className="flex justify-center py-16">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-lime-400"></div>
-              </div>
-            ) : routines.length === 0 ? (
-              <div className="text-center py-16 bg-neutral-900 rounded-3xl border border-dashed border-white/10">
-                <Archive size={48} className="mx-auto text-neutral-800 mb-4" />
-                <p className="text-neutral-500 font-medium">
-                  {isMe
-                    ? 'Chưa có routine nào. Tạo mới nhé!'
-                    : 'Thành viên này chưa có routine công khai.'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                    {isMe ? 'Your Routines' : 'Public Routines'}
-                  </h3>
-                  <span className="text-xs text-neutral-500">{routines.length} mục</span>
-                </div>
-
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
-                  {routines.map((routine) => (
-                    <Link
-                      to={`/customer/selfroutin/${routine.id}`}
-                      key={routine.id}
-                      className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-gradient-to-br from-neutral-900 via-neutral-800 to-black hover:border-lime-400/60 transition-all active:scale-[0.98]"
-                    >
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(163,230,53,0.22),transparent_45%)]" />
-
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-12 w-12 rounded-full border border-white/20 bg-black/30 backdrop-blur-sm flex items-center justify-center text-lime-300">
-                          <Target size={18} />
-                        </div>
-                      </div>
-
-                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
-                        <h3 className="text-xs font-semibold text-white truncate">
-                          {routine.title}
-                        </h3>
-                        <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-300">
-                          <span>{routine.taskCount} task</span>
-                          <span className="truncate ml-2">
-                            {repeatLabel(routine.repeatType, routine.repeatDays)}
-                          </span>
-                        </div>
-                        {isMe && (
-                          <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-400">
-                            <span className="inline-flex items-center gap-1">
-                              <Eye size={10} /> {visibilityLabel(routine.visibility)}
-                            </span>
-                            {routine.remindTime && (
-                              <span className="inline-flex items-center gap-1">
-                                <Clock3 size={10} /> {routine.remindTime}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <RoutinesScreen routinesLoading={routinesLoading} routines={routines} isMe={isMe} />
         )}
 
         {activeTab === 'settings' && isMe && (
-          <div className="grid gap-6 lg:grid-cols-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <form
-              onSubmit={handleUpdateProfile}
-              className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <PencilLine size={18} /> Thông tin cá nhân
-                </h2>
-                {loading && <span className="text-xs text-neutral-400">Đang tải...</span>}
-              </div>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">
-                  Họ và tên <span className="text-red-400">*</span>
-                </span>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={profile.fullName}
-                  onChange={handleProfileChange}
-                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                  required
-                />
-                <p className="text-[11px] text-neutral-500">
-                  Field bắt buộc cho PATCH /api/Users/me
-                </p>
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">Email</span>
-                <input
-                  type="email"
-                  name="email"
-                  value={profile.email}
-                  readOnly
-                  className="w-full cursor-not-allowed rounded-xl bg-neutral-800 px-3 py-3 text-neutral-400 outline-none"
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">Số điện thoại</span>
-                <input
-                  type="text"
-                  name="phoneNumber"
-                  value={profile.phoneNumber}
-                  onChange={handleProfileChange}
-                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">Avatar URL</span>
-                <input
-                  type="text"
-                  name="avatarUrl"
-                  value={profile.avatarUrl}
-                  onChange={handleProfileChange}
-                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                  placeholder="https://..."
-                />
-                <p className="text-[11px] text-neutral-500">Optional, chấp nhận http/https</p>
-              </label>
-
-              <div className="space-y-2 text-sm">
-                <span className="text-neutral-300">Tải ảnh đại diện từ máy</span>
-                <div className="rounded-xl border border-white/10 bg-neutral-800 p-3 space-y-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarFileUpload}
-                    disabled={uploadingAvatar}
-                    className="w-full text-sm text-neutral-300 file:mr-3 file:rounded-lg file:border-0 file:bg-lime-400 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-black"
-                  />
-                  <div className="flex items-center gap-3">
-                    {profile.avatarUrl ? (
-                      <img
-                        src={profile.avatarUrl}
-                        alt="avatar-preview"
-                        className="h-12 w-12 rounded-full object-cover border border-white/10"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 rounded-full bg-neutral-700 border border-white/10" />
-                    )}
-                    <p className="text-[11px] text-neutral-500">
-                      {uploadingAvatar
-                        ? 'Đang tải ảnh lên...'
-                        : 'Chọn ảnh để tự động upload và điền Avatar URL'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">Bio</span>
-                <textarea
-                  name="bio"
-                  value={profile.bio}
-                  onChange={handleProfileChange}
-                  className="h-28 w-full resize-none rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="w-full rounded-xl bg-lime-400 py-3 text-sm font-semibold text-black transition-all hover:bg-lime-500 disabled:opacity-70"
-              >
-                {savingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </button>
-            </form>
-
-            <form
-              onSubmit={handleChangePassword}
-              className="rounded-2xl bg-neutral-900 p-6 shadow-lg space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <KeyRound size={18} /> Đổi mật khẩu
-                </h2>
-              </div>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">
-                  Mật khẩu hiện tại <span className="text-red-400">*</span>
-                </span>
-                <input
-                  type="password"
-                  name="currentPassword"
-                  value={passwordForm.currentPassword}
-                  onChange={handlePasswordChange}
-                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                  required
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">
-                  Mật khẩu mới <span className="text-red-400">*</span>
-                </span>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={passwordForm.newPassword}
-                  onChange={handlePasswordChange}
-                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                  required
-                />
-                <p className="text-[11px] text-neutral-500">Tối thiểu 6 ký tự</p>
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="text-neutral-300">Xác nhận mật khẩu mới</span>
-                <input
-                  type="password"
-                  name="confirmNewPassword"
-                  value={passwordForm.confirmNewPassword}
-                  onChange={handlePasswordChange}
-                  className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
-                  required
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={changingPassword}
-                className="w-full rounded-xl bg-white py-3 text-sm font-semibold text-black transition-all hover:bg-neutral-200 disabled:opacity-70"
-              >
-                {changingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
-              </button>
-            </form>
-
-            <div className="lg:col-span-2 rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-semibold text-red-300">Đăng xuất tài khoản</h3>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Thoát phiên hiện tại và quay về màn hình đăng nhập.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={logoutLoading}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 disabled:opacity-70"
-                >
-                  <LogOut size={16} />
-                  {logoutLoading ? 'Đang đăng xuất...' : 'Logout'}
-                </button>
-              </div>
-            </div>
-          </div>
+          <SettingsScreen
+            handleUpdateProfile={handleUpdateProfile}
+            loading={loading}
+            profile={profile}
+            handleProfileChange={handleProfileChange}
+            handleAvatarFileUpload={handleAvatarFileUpload}
+            uploadingAvatar={uploadingAvatar}
+            savingProfile={savingProfile}
+            handleChangePassword={handleChangePassword}
+            passwordForm={passwordForm}
+            handlePasswordChange={handlePasswordChange}
+            changingPassword={changingPassword}
+            handleLogout={handleLogout}
+            logoutLoading={logoutLoading}
+          />
         )}
       </div>
     </div>
   );
 }
-
-const StatCard = ({ title, value, icon, sub }) => (
-  <div className="p-4 bg-neutral-900 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-    <div className="flex justify-between items-start mb-2">
-      <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{title}</span>
-      {icon}
-    </div>
-    <div className="flex items-baseline gap-1">
-      <span className="text-2xl font-bold text-white">{value}</span>
-      <span className="text-[10px] text-neutral-500 font-medium">{sub}</span>
-    </div>
-  </div>
-);
 
 export default Profile;

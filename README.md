@@ -98,3 +98,19 @@ npm run lint
 - Da cap nhat bo cuc danh sach task trong Routine Detail sang dang 2 cot tren man hinh desktop/tablet de Task A, Task B hien thi canh nhau, de so sanh va thao tac nhanh hon.
 - Da toi uu lai Routine Detail theo feedback UI: khu vuc Task su dung full-width container (tranh bi ep/chong cheo tren desktop), task list tro ve 1 cot de card khong bi meo, va bo sung popup `Xem popup` de xem nhanh chi tiet tung task (status, target, evidence, prepare items).
 - Da redesign task list theo huong Instagram feed de scale tot voi 10+ tasks: co summary chips, tim kiem task theo ten, loc theo trang thai (`All/InProgress/Completed/Skipped`), toggle che do `Grid/List`, va co nut `Mo rong/Thu gon` tung card de tranh trang qua dai.
+- Da don dep code cho trang Saved feed [MyFeedsSavedPage]: tach data mau thanh constant rieng, doi key map on dinh (khong dung index), bo sung empty state, va giu JSX gon de de mo rong khi ket noi API that.
+- Da giam do phuc tap cua cac trang lon bang cach tach helper/util ra file rieng:
+	- Home: tach toan bo helper mapping/feed normalize sang `src/page/customer/home/utils/homePageHelpers.js` (file page giam manh, de doc hon).
+	- Profile: tach helper subscription/analytics/format sang `src/page/customer/profile/utils/profileHelpers.js`.
+	- Subscription: tach helper status/currency/date/cancel flow sang `src/page/customer/subscription/utils/subscriptionHelpers.js`.
+	- Routine Detail: tach helper chung sang `src/page/customer/selfrRoutin/utils/routineDetailHelpers.js` va tach popup task sang `src/page/customer/selfrRoutin/components/TaskPreviewModal.jsx`.
+- Da tiep tuc refactor Routine Detail (vong 2): tach khoi JSX lon ra cac component con `src/page/customer/selfrRoutin/components/TaskCard.jsx`, `src/page/customer/selfrRoutin/components/TaskActions.jsx`, `src/page/customer/selfrRoutin/components/PrepareItemEditor.jsx`, `src/page/customer/selfrRoutin/components/NewTaskForm.jsx`; `RoutineDetailPage.jsx` gio chu yeu dieu phoi state/handler va da giam kich thuoc dang ke.
+- Da tiep tuc refactor Routine Detail (vong 3): tach them section `Tasks` va section `Prepare items` cua routine thanh `src/page/customer/selfrRoutin/components/TaskSection.jsx` va `src/page/customer/selfrRoutin/components/RoutinePrepareSection.jsx`; `RoutineDetailPage.jsx` giam xuong con ~940 dong va van build thanh cong.
+- Da tiep tuc clean-up theo huong tach screen: `src/page/customer/profile/Profile.jsx` duoc tach thanh cac man hinh con `src/page/customer/profile/components/DashboardScreen.jsx`, `src/page/customer/profile/components/RoutinesScreen.jsx`, `src/page/customer/profile/components/SettingsScreen.jsx`; file page chinh giam tu ~852 dong con ~507 dong, build pass.
+- Da fix loi "Them vat dung cho task khong luu" tren Routine Detail: dong bo key draft giua `taskStateKey` va `taskId` trong `handleTaskPrepareAdd` + `PrepareItemEditor`, tranh truong hop bam them nhung payload doc sai bucket state nen khong persist du lieu.
+- Da cap nhat UI Routine Detail theo feedback moi:
+	- Bo form "Them vat dung" o section Prepare items ben ngoai (chi giu danh sach item va thao tac xoa).
+	- Thay form them task co dinh bang nut `Them task` o header section Tasks; bam nut moi mo/thu gon form.
+	- Dua form "Chinh sua routine" vao ben trong card thong tin routine va hien/an bang nut `Chinh sua routine`.
+- Da bo han section `Prepare items` ben ngoai tren Routine Detail (khong con hien block nay trong man hinh), chi giu luong prepare item theo tung task.
+- Da xoa file component khong con su dung `src/page/customer/selfrRoutin/components/RoutinePrepareSection.jsx` de codebase gon hon va tranh dead code.

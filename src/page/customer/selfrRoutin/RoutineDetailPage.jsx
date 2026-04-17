@@ -1,11 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Eye, Clock3, Search, LayoutGrid, Rows3, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Calendar, Eye, Clock3 } from 'lucide-react';
 import { message } from 'antd';
 import BottomNav from '../../../components/BottomNav';
+import TaskPreviewModal from './components/TaskPreviewModal';
+import TaskSection from './components/TaskSection';
 import routineApi from '../../../api/routineApi';
 import taskLogApi from '../../../api/taskLogApi';
 import mediaApi from '../../../api/mediaApi';
+import {
+  normalizeId,
+  normalizeTaskStatus,
+  normalizePrepareCategoryLabel,
+  resolveTaskId,
+  resolveTaskStateKey,
+  normalizeTaskUnitType,
+  resolveEvidenceUrl,
+  isLikelyImageEvidence,
+  normalizeRemindTimeForInput,
+  normalizeRemindTimeForApi,
+  normalizeVisibility,
+  normalizeRepeatType,
+  resolveTasksFromRoutine,
+  statusLabel,
+  statusColor,
+  isValidHttpUrl,
+} from './utils/routineDetailHelpers';
 
 const RoutineDetailPage = () => {
   const { id } = useParams();
@@ -38,14 +58,6 @@ const RoutineDetailPage = () => {
     iconName: 'droplet',
     iconColor: '#22C55E',
   });
-  const [newPrepare, setNewPrepare] = useState({
-    name: '',
-    description: '',
-    purchaseUrl: '',
-    category: 'Equipment',
-    iconName: 'package',
-    isRequired: true,
-  });
   const [taskPrepareDrafts, setTaskPrepareDrafts] = useState({});
   const [taskPrepareEditing, setTaskPrepareEditing] = useState({});
   const [evidenceFiles, setEvidenceFiles] = useState({});
@@ -57,107 +69,7 @@ const RoutineDetailPage = () => {
   const [taskFilter, setTaskFilter] = useState('all');
   const [taskViewMode, setTaskViewMode] = useState('grid');
   const [expandedTaskMap, setExpandedTaskMap] = useState({});
-
-  const normalizeId = (value) => String(value ?? '').trim();
-
-  const normalizeTaskStatus = (value) => {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-
-    const str = String(value || '').trim().toLowerCase();
-    if (['completed', 'done', 'success'].includes(str)) return 1;
-    if (['skipped', 'skip'].includes(str)) return 2;
-    return 0;
-  };
-
-  const normalizePrepareCategoryLabel = (value) => {
-    const parsed = Number(value);
-    if (parsed === 0) return 'Equipment';
-    if (parsed === 1) return 'Accessory';
-    if (parsed === 2) return 'Food';
-    if (parsed === 3) return 'Other';
-
-    const str = String(value || '').trim().toLowerCase();
-    if (str === 'equipment') return 'Equipment';
-    if (str === 'accessory') return 'Accessory';
-    if (str === 'food') return 'Food';
-    return 'Other';
-  };
-
-  const resolveTaskId = (task) => task?.id || task?.taskId || task?.routineTaskId || null;
-
-  const resolveTaskStateKey = (task, index) => {
-    const resolvedId = resolveTaskId(task);
-    const normalized = normalizeId(resolvedId);
-    if (normalized) return normalized;
-    return `task-index-${index}`;
-  };
-
-  const normalizeTaskUnitType = (value) => {
-    const parsed = Number(value);
-    if (parsed === 0) return 'Checkbox';
-    if (parsed === 1) return 'Number';
-
-    const str = String(value || '').trim().toLowerCase();
-    if (['checkbox', 'boolean', 'done', 'check'].includes(str)) return 'Checkbox';
-    if (['number', 'numeric', 'ml', 'value', 'quantity'].includes(str)) return 'Number';
-    return 'Checkbox';
-  };
-
-  const resolveEvidenceUrl = (log) =>
-    log?.evidenceUrl || log?.evidenceURL || log?.evidence_url || log?.evidence?.url || null;
-
-  const isLikelyImageEvidence = (url) => {
-    const str = String(url || '').toLowerCase();
-    return (
-      str.startsWith('data:image/') ||
-      /\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/.test(str) ||
-      str.includes('res.cloudinary.com')
-    );
-  };
-
-  const normalizeRemindTimeForInput = (value) => {
-    if (!value) return '';
-    const str = String(value).trim();
-    if (!str) return '';
-
-    // API may return "HH:mm:ss" while <input type="time"> usually binds as "HH:mm".
-    if (str.includes(':')) {
-      return str.slice(0, 5);
-    }
-    return str;
-  };
-
-  const normalizeRemindTimeForApi = (value) => {
-    const str = String(value || '').trim();
-    if (!str) return null;
-
-    // Ensure backend receives TimeSpan-compatible format.
-    if (/^\d{2}:\d{2}$/.test(str)) return `${str}:00`;
-    if (/^\d{2}:\d{2}:\d{2}$/.test(str)) return str;
-    return null;
-  };
-
-  const normalizeVisibility = (value, defaultValue = 1) => {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-
-    const str = String(value || '').trim().toLowerCase();
-    if (str === 'private') return 0;
-    if (str === 'public') return 1;
-    if (str === 'subscribersonly' || str === 'subscribers') return 2;
-    return defaultValue;
-  };
-
-  const normalizeRepeatType = (value, defaultValue = 0) => {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-
-    const str = String(value || '').trim().toLowerCase();
-    if (str === 'daily') return 0;
-    if (str === 'weekly') return 1;
-    return defaultValue;
-  };
+  const [showEditRoutine, setShowEditRoutine] = useState(false);
 
   const fetchRoutine = async () => {
     try {
@@ -228,90 +140,13 @@ const RoutineDetailPage = () => {
     return 'Unknown';
   };
 
-  const resolveTaskArray = (value) => {
-    if (Array.isArray(value)) return value;
-    if (!value || typeof value !== 'object') return [];
-
-    const nestedCandidates = [value.items, value.results, value.data, value.$values];
-    for (const candidate of nestedCandidates) {
-      if (Array.isArray(candidate)) return candidate;
-    }
-
-    return [];
-  };
-
-  const resolveTasksFromRoutine = (routineData) => {
-    const taskCandidates = [
-      routineData?.tasks,
-      routineData?.routineTasks,
-      routineData?.routine_tasks,
-      routineData?.taskDtos,
-    ];
-
-    for (const candidate of taskCandidates) {
-      const resolved = resolveTaskArray(candidate);
-      if (resolved.length > 0) {
-        return resolved.map((task, index) => {
-          const taskPrepareCandidates = [
-            task?.prepareItems,
-            task?.prepareItemDtos,
-            task?.prepareItemDTOs,
-            task?.taskPrepareItems,
-            task?.taskPrepareItemDtos,
-            task?.taskPrepareItemDTOs,
-          ];
-
-          let taskPrepareItems = [];
-          for (const prepareCandidate of taskPrepareCandidates) {
-            const resolvedPrepare = resolveTaskArray(prepareCandidate);
-            if (resolvedPrepare.length > 0) {
-              taskPrepareItems = resolvedPrepare;
-              break;
-            }
-          }
-
-          return {
-            ...task,
-            id: task?.id || task?.taskId || `task-${index}`,
-            taskId: task?.taskId || task?.id || null,
-            prepareItems: Array.isArray(taskPrepareItems)
-              ? taskPrepareItems.map((item, itemIndex) => ({
-                  ...item,
-                  id: item?.id || item?.prepareItemId || `prepare-${index}-${itemIndex}`,
-                  category: normalizePrepareCategoryLabel(item?.category),
-                }))
-              : [],
-          };
-        });
-      }
-    }
-
-    for (const candidate of taskCandidates) {
-      if (Array.isArray(candidate) && candidate.length === 0) return candidate;
-    }
-
-    return [];
-  };
-
   const getLogByTask = (taskId) =>
     logs.find((log) => normalizeId(log?.taskId) === normalizeId(taskId));
   const tasks = resolveTasksFromRoutine(routine);
-  const prepareItems = routine?.prepareItems || [];
   const completedCount = tasks.reduce(
     (sum, t) => (normalizeTaskStatus(getLogByTask(resolveTaskId(t))?.status) === 1 ? sum + 1 : sum),
     0
   );
-  const statusLabel = (status) => {
-    if (status === 1) return 'Completed';
-    if (status === 2) return 'Skipped';
-    return 'InProgress';
-  };
-  const statusColor = (status) => {
-    if (status === 1) return 'text-[#22C55E] bg-[#22C55E]/10 border-[#22C55E]/30';
-    if (status === 2) return 'text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/30';
-    return 'text-[#F97316] bg-[#F97316]/10 border-[#F97316]/30';
-  };
-
   const getTaskNormalizedStatus = (task) =>
     normalizeTaskStatus(getLogByTask(resolveTaskId(task))?.status);
 
@@ -431,61 +266,6 @@ const RoutineDetailPage = () => {
     }
   };
 
-  const handleAddPrepareItem = async () => {
-    if (!newPrepare.name.trim()) {
-      message.warning('Nhập tên vật dụng');
-      return;
-    }
-    try {
-      const payload = {
-        name: newPrepare.name,
-        description: newPrepare.description?.trim() || null,
-        imageUrl: null,
-        purchaseUrl: newPrepare.purchaseUrl?.trim() || null,
-        iconName: newPrepare.iconName || 'package',
-        category: categoryMap[newPrepare.category] ?? 0,
-        isRequired: !!newPrepare.isRequired,
-        orderIndex: prepareItems.length,
-      };
-      await routineApi.addPrepareItem(id, payload);
-      message.success('Đã thêm vật dụng');
-      setNewPrepare({
-        name: '',
-        description: '',
-        purchaseUrl: '',
-        category: 'Equipment',
-        iconName: 'package',
-        isRequired: true,
-      });
-      fetchRoutine();
-    } catch (err) {
-      console.error('Add prepare item failed:', err.response?.data || err);
-      const errorData = err.response?.data;
-      const validationErrors = errorData?.errors;
-      let errorMsg = 'Không thể thêm vật dụng';
-      if (validationErrors) {
-        errorMsg = Object.entries(validationErrors)
-          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
-          .join(' | ');
-      } else if (errorData?.message) {
-        errorMsg = errorData.message;
-      }
-      message.error(errorMsg, 10);
-    }
-  };
-
-  const handleDeletePrepareItem = async (itemId) => {
-    if (!window.confirm('Xóa vật dụng này?')) return;
-    try {
-      await routineApi.deletePrepareItem(id, itemId);
-      message.success('Đã xóa vật dụng');
-      fetchRoutine();
-    } catch (err) {
-      console.error('Delete prepare item failed:', err.response?.data || err);
-      message.error(err.response?.data?.message || 'Không thể xóa vật dụng');
-    }
-  };
-
   const defaultPreparePayload = () => ({
     name: '',
     description: '',
@@ -497,12 +277,12 @@ const RoutineDetailPage = () => {
 
   const getTaskDraft = (taskId) => taskPrepareDrafts[taskId] || defaultPreparePayload();
 
-  const handleTaskPrepareAdd = async (taskId) => {
+  const handleTaskPrepareAdd = async (taskId, draftKey = taskId) => {
     if (!taskId) {
       message.warning('Không tìm thấy taskId hợp lệ');
       return;
     }
-    const draft = getTaskDraft(taskId);
+    const draft = getTaskDraft(draftKey);
     if (!draft.name.trim()) {
       message.warning('Nhập tên vật dụng');
       return;
@@ -522,7 +302,7 @@ const RoutineDetailPage = () => {
       };
       await routineApi.addTaskPrepareItem(id, taskId, payload);
       message.success('Đã thêm vật dụng cho task');
-      setTaskPrepareDrafts((prev) => ({ ...prev, [taskId]: defaultPreparePayload() }));
+      setTaskPrepareDrafts((prev) => ({ ...prev, [draftKey]: defaultPreparePayload() }));
       fetchRoutine();
     } catch (err) {
       console.error('Add task prepare item failed:', err.response?.data || err);
@@ -772,16 +552,6 @@ const RoutineDetailPage = () => {
     }
   };
 
-  const isValidHttpUrl = (value) => {
-    if (!value) return false;
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    } catch (err) {
-      return false;
-    }
-  };
-
   const uploadEvidenceImage = async (file) => {
     if (!file.type?.startsWith('image/')) {
       throw new Error('Vui lòng chọn file ảnh hợp lệ');
@@ -910,7 +680,17 @@ const RoutineDetailPage = () => {
         ) : (
           <>
             <section className="p-4 rounded-2xl bg-[#1a1a1a] border border-white/5 space-y-3">
-              <h2 className="text-lg font-bold">{routine.title}</h2>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-bold">{routine.title}</h2>
+                {editForm && (
+                  <button
+                    onClick={() => setShowEditRoutine((prev) => !prev)}
+                    className="shrink-0 px-3 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-zinc-200 hover:bg-white/10 transition-colors"
+                  >
+                    {showEditRoutine ? 'Ẩn chỉnh sửa' : 'Chỉnh sửa routine'}
+                  </button>
+                )}
+              </div>
               {routine.description && (
                 <p className="text-sm text-zinc-400 leading-relaxed">{routine.description}</p>
               )}
@@ -935,1128 +715,159 @@ const RoutineDetailPage = () => {
                   </span>
                 )}
               </div>
-            </section>
 
-            {editForm && (
-              <section className="p-4 rounded-2xl bg-[#101010] border border-white/5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">Chỉnh sửa routine</h3>
-                  <button
-                    onClick={handleDeleteRoutine}
-                    disabled={deleting}
-                    className="text-xs text-red-400 border border-red-500/40 px-3 py-1 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-60"
-                  >
-                    {deleting ? 'Đang xóa...' : 'Xóa routine'}
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    placeholder="Tiêu đề"
-                  />
-                  <textarea
-                    value={editForm.description}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    rows={2}
-                    placeholder="Mô tả"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={editForm.repeatType}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, repeatType: parseInt(e.target.value, 10) })
-                      }
-                      className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              {editForm && showEditRoutine && (
+                <div className="mt-2 p-3 rounded-xl bg-[#101010] border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold">Chỉnh sửa routine</h3>
+                    <button
+                      onClick={handleDeleteRoutine}
+                      disabled={deleting}
+                      className="text-xs text-red-400 border border-red-500/40 px-3 py-1 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-60"
                     >
-                      <option value={0}>Daily</option>
-                      <option value={1}>Weekly</option>
-                    </select>
-                    <select
-                      value={editForm.visibility}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, visibility: parseInt(e.target.value, 10) })
-                      }
-                      className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    >
-                      <option value={0}>Private</option>
-                      <option value={1}>Public</option>
-                      <option value={2}>SubscribersOnly</option>
-                    </select>
+                      {deleting ? 'Đang xóa...' : 'Xóa routine'}
+                    </button>
                   </div>
-                  {editForm.repeatType === 1 && (
+                  <div className="space-y-2">
                     <input
                       type="text"
-                      value={editForm.repeatDays}
-                      onChange={(e) => setEditForm({ ...editForm, repeatDays: e.target.value })}
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                       className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                      placeholder="Ngày lặp (vd: 2,4,6)"
+                      placeholder="Tiêu đề"
                     />
-                  )}
-                  <input
-                    type="time"
-                    value={editForm.remindTime || ''}
-                    onChange={(e) => setEditForm({ ...editForm, remindTime: e.target.value })}
-                    className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  />
-
-                  <button
-                    onClick={handleUpdateRoutine}
-                    disabled={savingUpdate}
-                    className="w-full bg-white text-black font-bold py-2 rounded-lg active:scale-95 transition-all disabled:opacity-60"
-                  >
-                    {savingUpdate ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
-                </div>
-              </section>
-            )}
-
-            <section className="p-4 rounded-2xl bg-[#1a1a1a] border border-white/5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold">Tasks</h3>
-                <span className="text-xs text-zinc-500">{tasks.length} task(s)</span>
-              </div>
-              <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
-                    <p className="text-[10px] text-zinc-500">Total</p>
-                    <p className="text-sm font-semibold text-white">{taskStats.total}</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
-                    <p className="text-[10px] text-zinc-500">InProgress</p>
-                    <p className="text-sm font-semibold text-[#F97316]">{taskStats.inProgress}</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
-                    <p className="text-[10px] text-zinc-500">Completed</p>
-                    <p className="text-sm font-semibold text-[#22C55E]">{taskStats.completed}</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
-                    <p className="text-[10px] text-zinc-500">Skipped</p>
-                    <p className="text-sm font-semibold text-[#EF4444]">{taskStats.skipped}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col md:flex-row md:items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                    <input
-                      type="text"
-                      value={taskQuery}
-                      onChange={(e) => setTaskQuery(e.target.value)}
-                      placeholder="Tìm task..."
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/30 border border-white/10 text-sm text-white"
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                      rows={2}
+                      placeholder="Mô tả"
                     />
-                  </div>
-                  <div className="inline-flex rounded-xl bg-black/30 border border-white/10 p-1">
-                    <button
-                      onClick={() => setTaskViewMode('grid')}
-                      className={`px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 ${taskViewMode === 'grid' ? 'bg-white text-black font-semibold' : 'text-zinc-300'}`}
-                    >
-                      <LayoutGrid size={14} /> Grid
-                    </button>
-                    <button
-                      onClick={() => setTaskViewMode('list')}
-                      className={`px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 ${taskViewMode === 'list' ? 'bg-white text-black font-semibold' : 'text-zinc-300'}`}
-                    >
-                      <Rows3 size={14} /> List
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {taskFilterOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setTaskFilter(opt.value)}
-                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs border ${taskFilter === opt.value ? 'bg-white text-black border-white font-semibold' : 'bg-black/30 text-zinc-300 border-white/10'}`}
-                    >
-                      {opt.label} ({opt.count})
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {tasks.length === 0 ? (
-                <p className="text-sm text-zinc-500">Chưa có task nào trong routine này.</p>
-              ) : filteredTasks.length === 0 ? (
-                <p className="text-sm text-zinc-500">Không có task phù hợp với bộ lọc hiện tại.</p>
-              ) : (
-                <div
-                  className={
-                    taskViewMode === 'grid'
-                      ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3'
-                      : 'grid grid-cols-1 gap-3'
-                  }
-                >
-                  {filteredTasks.map((task, taskIndex) => (
-                    <div
-                      key={resolveTaskStateKey(task, taskIndex)}
-                      className="p-3 rounded-xl bg-neutral-900 border border-white/5 h-fit"
-                    >
-                      {(() => {
-                        const taskId = resolveTaskId(task);
-                        const taskStateKey = resolveTaskStateKey(task, taskIndex);
-                        const taskLog = getLogByTask(taskId || task.id || task.taskId);
-                        const normalizedStatus = normalizeTaskStatus(taskLog?.status);
-                        const editingTask = taskEditing[taskId];
-                        const isExpanded = !!expandedTaskMap[taskStateKey];
-                        return (
-                          <>
-                      <div className="mb-2 text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold">
-                        Task {taskIndex + 1}
-                      </div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="font-semibold text-white">{task.title || task.name}</h4>
-                          {typeof task.targetValue !== 'undefined' && (
-                            <span className="text-xs text-zinc-500">
-                              Target: {task.targetValue} {task.unitName || ''}
-                            </span>
-                          )}
-                          {task.description && (
-                            <p className="text-sm text-zinc-500 mt-1 line-clamp-2">
-                              {task.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span
-                            className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}
-                          >
-                            {statusLabel(normalizedStatus)}
-                          </span>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setPreviewTask(task)}
-                              className="text-[11px] px-2 py-1 rounded-lg border border-lime-400/40 text-lime-300"
-                            >
-                              Xem popup
-                            </button>
-                            <button
-                              onClick={() => toggleTaskExpanded(taskStateKey)}
-                              className="text-[11px] px-2 py-1 rounded-lg border border-white/10 text-zinc-200 inline-flex items-center gap-1"
-                            >
-                              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                              {isExpanded ? 'Thu gọn' : 'Mở rộng'}
-                            </button>
-                            <button
-                              onClick={() => createTaskEditDraft(task)}
-                              className="text-[11px] px-2 py-1 rounded-lg border border-white/10 text-white"
-                            >
-                              Sửa task
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTask(taskId)}
-                              disabled={deletingTaskId === taskId}
-                              className="text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-400 disabled:opacity-60"
-                            >
-                              {deletingTaskId === taskId ? 'Đang xóa...' : 'Xóa task'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      {isExpanded && editingTask && (
-                        <div className="mt-3 p-3 rounded-xl bg-neutral-800 border border-white/10 space-y-2">
-                          <input
-                            type="text"
-                            value={editingTask.title}
-                            onChange={(e) =>
-                              setTaskEditing((prev) => ({
-                                ...prev,
-                                [taskId]: { ...editingTask, title: e.target.value },
-                              }))
-                            }
-                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                            placeholder="Tên task"
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <select
-                              value={editingTask.unitType}
-                              onChange={(e) =>
-                                setTaskEditing((prev) => ({
-                                  ...prev,
-                                  [taskId]: { ...editingTask, unitType: e.target.value },
-                                }))
-                              }
-                              className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                            >
-                              <option value="Checkbox">Checkbox</option>
-                              <option value="Number">Number</option>
-                            </select>
-                            <select
-                              value={editingTask.iconName}
-                              onChange={(e) =>
-                                setTaskEditing((prev) => ({
-                                  ...prev,
-                                  [taskId]: { ...editingTask, iconName: e.target.value },
-                                }))
-                              }
-                              className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                            >
-                              {iconOptions.map((icon) => (
-                                <option key={icon} value={icon}>
-                                  {icon}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          {editingTask.unitType === 'Number' && (
-                            <div className="grid grid-cols-2 gap-2">
-                              <input
-                                type="number"
-                                min="1"
-                                value={editingTask.targetValue}
-                                onChange={(e) =>
-                                  setTaskEditing((prev) => ({
-                                    ...prev,
-                                    [taskId]: { ...editingTask, targetValue: e.target.value },
-                                  }))
-                                }
-                                className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                                placeholder="Target"
-                              />
-                              <input
-                                type="text"
-                                value={editingTask.unitName}
-                                onChange={(e) =>
-                                  setTaskEditing((prev) => ({
-                                    ...prev,
-                                    [taskId]: { ...editingTask, unitName: e.target.value },
-                                  }))
-                                }
-                                className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                                placeholder="Unit"
-                              />
-                            </div>
-                          )}
-                          <div className="grid grid-cols-3 gap-2">
-                            {colorOptions.map((color) => {
-                              const active = editingTask.iconColor === color;
-                              return (
-                                <button
-                                  key={color}
-                                  type="button"
-                                  onClick={() =>
-                                    setTaskEditing((prev) => ({
-                                      ...prev,
-                                      [taskId]: { ...editingTask, iconColor: color },
-                                    }))
-                                  }
-                                  className={`h-8 rounded-lg border ${active ? 'border-lime-400 ring-2 ring-lime-400/50' : 'border-white/10'}`}
-                                  style={{ backgroundColor: color }}
-                                />
-                              );
-                            })}
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleUpdateTask(taskId)}
-                              disabled={savingTaskId === taskId}
-                              className="flex-1 bg-lime-400 text-black font-bold py-2 rounded-lg disabled:opacity-60"
-                            >
-                              {savingTaskId === taskId ? 'Đang lưu...' : 'Lưu task'}
-                            </button>
-                            <button
-                              onClick={() => cancelTaskEdit(taskId)}
-                              className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm"
-                            >
-                              Hủy
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      {isExpanded && (
-                      <div className="mt-3 p-3 rounded-xl bg-neutral-800 border border-white/10 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-zinc-400">Check-in / Log</span>
-                          {logLoading ? (
-                            <span className="text-[11px] text-zinc-500">Đang tải...</span>
-                          ) : (
-                            <span
-                              className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}
-                            >
-                              {statusLabel(normalizedStatus)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => handleCheckin(taskId, normalizedStatus)}
-                            disabled={normalizedStatus === 1}
-                            className="px-3 py-2 rounded-lg bg-[#22C55E] text-black text-sm font-bold active:scale-95 disabled:opacity-60"
-                          >
-                            Check-in
-                          </button>
-                          <button
-                            onClick={() => handleSkip(taskLog?.id)}
-                            className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm active:scale-95"
-                          >
-                            Skip
-                          </button>
-                          <button
-                            onClick={() => handleUndo(taskLog?.id)}
-                            className="px-3 py-2 rounded-lg border border-[#EF4444]/40 text-[#EF4444] text-sm active:scale-95"
-                          >
-                            Hủy log
-                          </button>
-                        </div>
-
-                        {/* Quantity log */}
-                        <div className="grid grid-cols-3 gap-2 items-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={logInputs[taskStateKey] || ''}
-                            onChange={(e) =>
-                              setLogInputs((prev) => ({
-                                ...prev,
-                                [taskStateKey]: e.target.value,
-                              }))
-                            }
-                            className="col-span-2 bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                            placeholder="Giá trị (ml, reps...)"
-                          />
-                          <button
-                            onClick={() => handleLogQuantity(taskId)}
-                            className="w-full bg-white text-black font-bold py-2 rounded-lg active:scale-95 text-sm"
-                          >
-                            Ghi log
-                          </button>
-                        </div>
-
-                        {/* Evidence */}
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-3 gap-2 items-center">
-                            <input
-                              type="text"
-                              value={evidenceInputs[taskStateKey] || ''}
-                              onChange={(e) =>
-                                setEvidenceInputs((prev) => ({
-                                  ...prev,
-                                  [taskStateKey]: e.target.value,
-                                }))
-                              }
-                              className="col-span-2 bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                              placeholder="Evidence URL"
-                            />
-                            <button
-                              onClick={() =>
-                                handleEvidence(
-                                  taskLog?.id,
-                                  taskId
-                                )
-                              }
-                              className="w-full bg-zinc-200 text-black font-bold py-2 rounded-lg active:scale-95 text-sm"
-                            >
-                              Lưu link / ảnh
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 items-center">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                setEvidenceFiles((prev) => ({
-                                  ...prev,
-                                  [taskStateKey]: file,
-                                }));
-                              }}
-                              className="col-span-2 text-xs text-white"
-                            />
-                            <span className="text-[11px] text-zinc-500">
-                              {evidenceFiles[taskStateKey]?.name || 'Chọn ảnh'}
-                            </span>
-                          </div>
-                        </div>
-                        {taskLog?.currentValue !== undefined && (
-                          <p className="text-[11px] text-zinc-500">
-                            Giá trị hiện tại: {taskLog?.currentValue}
-                          </p>
-                        )}
-                        {resolveEvidenceUrl(taskLog) && (
-                          <div className="p-2 rounded-lg bg-neutral-900 border border-white/10 space-y-2">
-                            <p className="text-[11px] text-zinc-500">Minh chứng đã lưu</p>
-                            {isLikelyImageEvidence(resolveEvidenceUrl(taskLog)) ? (
-                              <img
-                                src={resolveEvidenceUrl(taskLog)}
-                                alt="Evidence"
-                                className="w-full max-h-52 object-cover rounded-lg border border-white/10"
-                              />
-                            ) : (
-                              <a
-                                href={resolveEvidenceUrl(taskLog)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs text-lime-400 hover:underline break-all"
-                              >
-                                {resolveEvidenceUrl(taskLog)}
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      )}
-
-                      {/* Task-level prepare items (placed after log for clarity) */}
-                      {isExpanded && (
-                      <div className="mt-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-zinc-500">Prepare items</span>
-                          <span className="text-[11px] text-zinc-500">
-                            {task.prepareItems?.length || 0} item(s)
-                          </span>
-                        </div>
-                        {task.prepareItems && task.prepareItems.length > 0 ? (
-                          <div className="space-y-2">
-                            {task.prepareItems.map((p) => {
-                              const editing = taskPrepareEditing[p.id];
-                              return (
-                                <div
-                                  key={p.id}
-                                  className="p-2 rounded-lg bg-neutral-800 border border-white/10"
-                                >
-                                  {editing ? (
-                                    <div className="space-y-2">
-                                      <input
-                                        type="text"
-                                        value={editing.name}
-                                        onChange={(e) =>
-                                          setTaskPrepareEditing((prev) => ({
-                                            ...prev,
-                                            [p.id]: { ...editing, name: e.target.value },
-                                          }))
-                                        }
-                                        className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                                      />
-                                      <textarea
-                                        value={editing.description}
-                                        onChange={(e) =>
-                                          setTaskPrepareEditing((prev) => ({
-                                            ...prev,
-                                            [p.id]: { ...editing, description: e.target.value },
-                                          }))
-                                        }
-                                        className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                                        rows={2}
-                                        placeholder="Mô tả"
-                                      />
-                                      <input
-                                        type="text"
-                                        value={editing.purchaseUrl}
-                                        onChange={(e) =>
-                                          setTaskPrepareEditing((prev) => ({
-                                            ...prev,
-                                            [p.id]: { ...editing, purchaseUrl: e.target.value },
-                                          }))
-                                        }
-                                        className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                                        placeholder="Link mua"
-                                      />
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <select
-                                          value={editing.category}
-                                          onChange={(e) =>
-                                            setTaskPrepareEditing((prev) => ({
-                                              ...prev,
-                                              [p.id]: { ...editing, category: e.target.value },
-                                            }))
-                                          }
-                                          className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                                        >
-                                          {prepareCategoryOptions.map((opt) => (
-                                            <option key={opt} value={opt}>
-                                              {opt}
-                                            </option>
-                                          ))}
-                                        </select>
-                                        <select
-                                          value={editing.iconName}
-                                          onChange={(e) =>
-                                            setTaskPrepareEditing((prev) => ({
-                                              ...prev,
-                                              [p.id]: { ...editing, iconName: e.target.value },
-                                            }))
-                                          }
-                                          className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                                        >
-                                          {[...iconOptions, 'package', 'box', 'shopping-bag'].map(
-                                            (icon) => (
-                                              <option key={icon} value={icon}>
-                                                {icon}
-                                              </option>
-                                            )
-                                          )}
-                                        </select>
-                                      </div>
-                                      <label className="inline-flex items-center gap-2 text-sm text-white">
-                                        <input
-                                          type="checkbox"
-                                          checked={!!editing.isRequired}
-                                          onChange={(e) =>
-                                            setTaskPrepareEditing((prev) => ({
-                                              ...prev,
-                                              [p.id]: { ...editing, isRequired: e.target.checked },
-                                            }))
-                                          }
-                                          className="accent-lime-400"
-                                        />
-                                        Bắt buộc
-                                      </label>
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={() =>
-                                                handleTaskPrepareEdit(resolveTaskId(task), p.id)
-                                          }
-                                          className="flex-1 bg-lime-400 text-black font-bold py-2 rounded-lg active:scale-95 transition-all"
-                                        >
-                                          Lưu
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            setTaskPrepareEditing((prev) => {
-                                              const next = { ...prev };
-                                              delete next[p.id];
-                                              return next;
-                                            })
-                                          }
-                                          className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm"
-                                        >
-                                          Hủy
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="space-y-1">
-                                        <p className="text-sm text-white">{p.name}</p>
-                                        <p className="text-xs text-zinc-500">{p.category}</p>
-                                        {p.description && (
-                                          <p className="text-xs text-zinc-500">{p.description}</p>
-                                        )}
-                                        {p.purchaseUrl && (
-                                          <a
-                                            className="text-xs text-lime-400 hover:underline"
-                                            href={p.purchaseUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                          >
-                                            Link mua
-                                          </a>
-                                        )}
-                                        <span className="text-[11px] text-zinc-500">
-                                          {p.isRequired ? 'Required' : 'Optional'}
-                                        </span>
-                                      </div>
-                                      <div className="flex flex-col gap-2">
-                                        <button
-                                          onClick={() =>
-                                            setTaskPrepareEditing((prev) => ({
-                                              ...prev,
-                                              [p.id]: { ...p },
-                                            }))
-                                          }
-                                          className="text-xs px-3 py-1 rounded-lg border border-white/10 text-white"
-                                        >
-                                          Sửa
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            handleTaskPrepareDelete(resolveTaskId(task), p.id)
-                                          }
-                                          className="text-xs px-3 py-1 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10"
-                                        >
-                                          Xóa
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-zinc-600">Chưa có vật dụng.</p>
-                        )}
-
-                        {/* Add prepare item to task */}
-                        <div className="p-3 rounded-lg bg-neutral-800 border border-white/10 space-y-2">
-                          <h5 className="text-xs text-white font-semibold">
-                            Thêm vật dụng cho task
-                          </h5>
-                          <input
-                            type="text"
-                            placeholder="Tên vật dụng"
-                            value={getTaskDraft(taskStateKey).name}
-                            onChange={(e) =>
-                              setTaskPrepareDrafts((prev) => ({
-                                ...prev,
-                                [taskStateKey]: {
-                                  ...getTaskDraft(taskStateKey),
-                                  name: e.target.value,
-                                },
-                              }))
-                            }
-                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                          />
-                          <textarea
-                            placeholder="Mô tả (optional)"
-                            value={getTaskDraft(taskStateKey).description}
-                            onChange={(e) =>
-                              setTaskPrepareDrafts((prev) => ({
-                                ...prev,
-                                [taskStateKey]: {
-                                  ...getTaskDraft(taskStateKey),
-                                  description: e.target.value,
-                                },
-                              }))
-                            }
-                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                            rows={2}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Link mua (optional)"
-                            value={getTaskDraft(taskStateKey).purchaseUrl}
-                            onChange={(e) =>
-                              setTaskPrepareDrafts((prev) => ({
-                                ...prev,
-                                [taskStateKey]: {
-                                  ...getTaskDraft(taskStateKey),
-                                  purchaseUrl: e.target.value,
-                                },
-                              }))
-                            }
-                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <select
-                              value={getTaskDraft(taskStateKey).category}
-                              onChange={(e) =>
-                                setTaskPrepareDrafts((prev) => ({
-                                  ...prev,
-                                  [taskStateKey]: {
-                                    ...getTaskDraft(taskStateKey),
-                                    category: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                            >
-                              {prepareCategoryOptions.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
-                            <select
-                              value={getTaskDraft(taskStateKey).iconName}
-                              onChange={(e) =>
-                                setTaskPrepareDrafts((prev) => ({
-                                  ...prev,
-                                  [taskStateKey]: {
-                                    ...getTaskDraft(taskStateKey),
-                                    iconName: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                            >
-                              {[...iconOptions, 'package', 'box', 'shopping-bag'].map((icon) => (
-                                <option key={icon} value={icon}>
-                                  {icon}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <label className="inline-flex items-center gap-2 text-sm text-white">
-                            <input
-                              type="checkbox"
-                              checked={!!getTaskDraft(taskStateKey).isRequired}
-                              onChange={(e) =>
-                                setTaskPrepareDrafts((prev) => ({
-                                  ...prev,
-                                  [taskStateKey]: {
-                                    ...getTaskDraft(taskStateKey),
-                                    isRequired: e.target.checked,
-                                  },
-                                }))
-                              }
-                              className="accent-lime-400"
-                            />
-                            Bắt buộc
-                          </label>
-                          <button
-                            onClick={() => handleTaskPrepareAdd(resolveTaskId(task))}
-                            className="w-full bg-white text-black font-bold py-2 rounded-lg active:scale-95 transition-all"
-                          >
-                            Thêm vật dụng
-                          </button>
-                        </div>
-                      </div>
-                      )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-4 p-3 rounded-xl bg-neutral-900 border border-white/5 space-y-3">
-                <h4 className="font-semibold text-white">Thêm task mới</h4>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Task name"
-                    value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={newTask.type}
-                      onChange={(e) => setNewTask({ ...newTask, type: e.target.value })}
-                      className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    >
-                      <option value="Checkbox">Checkbox</option>
-                      <option value="Number">Number</option>
-                    </select>
-                    <select
-                      value={newTask.difficulty}
-                      onChange={(e) => setNewTask({ ...newTask, difficulty: e.target.value })}
-                      className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    >
-                      <option value="Easy">Easy</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
-                    </select>
-                  </div>
-                  {newTask.type === 'Number' && (
                     <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={newTask.targetValue}
-                        onChange={(e) => setNewTask({ ...newTask, targetValue: e.target.value })}
-                        className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                      />
+                      <select
+                        value={editForm.repeatType}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, repeatType: parseInt(e.target.value, 10) })
+                        }
+                        className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                      >
+                        <option value={0}>Daily</option>
+                        <option value={1}>Weekly</option>
+                      </select>
+                      <select
+                        value={editForm.visibility}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, visibility: parseInt(e.target.value, 10) })
+                        }
+                        className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                      >
+                        <option value={0}>Private</option>
+                        <option value={1}>Public</option>
+                        <option value={2}>SubscribersOnly</option>
+                      </select>
+                    </div>
+                    {editForm.repeatType === 1 && (
                       <input
                         type="text"
-                        value={newTask.unitName}
-                        onChange={(e) => setNewTask({ ...newTask, unitName: e.target.value })}
-                        className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                        placeholder="Unit (ml, reps)"
+                        value={editForm.repeatDays}
+                        onChange={(e) => setEditForm({ ...editForm, repeatDays: e.target.value })}
+                        className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                        placeholder="Ngày lặp (vd: 2,4,6)"
                       />
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={newTask.iconName}
-                      onChange={(e) => setNewTask({ ...newTask, iconName: e.target.value })}
-                      className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    >
-                      {iconOptions.map((icon) => (
-                        <option key={icon} value={icon}>
-                          {icon}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="flex flex-col gap-2 bg-neutral-800 border border-white/10 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {colorOptions.map((color) => {
-                          const isActive = newTask.iconColor === color;
-                          return (
-                            <button
-                              key={color}
-                              type="button"
-                              onClick={() => setNewTask({ ...newTask, iconColor: color })}
-                              className={`w-8 h-8 rounded-full border transition-all ${isActive ? 'border-lime-400 ring-2 ring-lime-400/50' : 'border-white/10'}`}
-                              style={{ backgroundColor: color }}
-                              aria-label={color}
-                            />
-                          );
-                        })}
-                      </div>
-                      <span className="text-[11px] text-zinc-500">
-                        Đang chọn:{' '}
-                        <span className="text-white font-semibold">{newTask.iconColor}</span>
-                      </span>
-                    </div>
-                  </div>
-                  <textarea
-                    placeholder="Notes (optional)"
-                    value={newTask.notes}
-                    onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
-                    className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    rows={2}
-                  />
-                  <textarea
-                    placeholder="Tips (optional)"
-                    value={newTask.tips}
-                    onChange={(e) => setNewTask({ ...newTask, tips: e.target.value })}
-                    className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    rows={2}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Media URL (optional)"
-                    value={newTask.mediaUrl}
-                    onChange={(e) => setNewTask({ ...newTask, mediaUrl: e.target.value })}
-                    className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
+                    )}
                     <input
-                      type="number"
-                      min="0"
-                      placeholder="Estimated minutes"
-                      value={newTask.estimatedMinutes}
-                      onChange={(e) => setNewTask({ ...newTask, estimatedMinutes: e.target.value })}
-                      className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                      type="time"
+                      value={editForm.remindTime || ''}
+                      onChange={(e) => setEditForm({ ...editForm, remindTime: e.target.value })}
+                      className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                     />
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Rest after (seconds)"
-                      value={newTask.restAfterSeconds}
-                      onChange={(e) => setNewTask({ ...newTask, restAfterSeconds: e.target.value })}
-                      className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    />
-                  </div>
-                  <button
-                    onClick={handleAddTask}
-                    disabled={adding}
-                    className="w-full bg-lime-400 text-black font-bold py-2 rounded-lg active:scale-95 transition-all disabled:opacity-60"
-                  >
-                    {adding ? 'Đang thêm...' : 'Thêm task'}
-                  </button>
-                </div>
-              </div>
-            </section>
 
-            <section className="p-4 rounded-2xl bg-[#1a1a1a] border border-white/5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold">Prepare items</h3>
-                <span className="text-xs text-zinc-500">{prepareItems.length} item(s)</span>
-              </div>
-              {prepareItems.length === 0 ? (
-                <p className="text-sm text-zinc-500">Chưa có vật dụng nào.</p>
-              ) : (
-                <div className="space-y-3">
-                  {prepareItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-3 rounded-xl bg-neutral-900 border border-white/5 flex items-start gap-3"
+                    <button
+                      onClick={handleUpdateRoutine}
+                      disabled={savingUpdate}
+                      className="w-full bg-white text-black font-bold py-2 rounded-lg active:scale-95 transition-all disabled:opacity-60"
                     >
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <h4 className="font-semibold text-white">{item.name}</h4>
-                            <p className="text-xs text-zinc-500">{item.category}</p>
-                          </div>
-                          <span className="text-[11px] px-2 py-1 rounded-full border border-white/10 text-zinc-300">
-                            {item.isRequired ? 'Required' : 'Optional'}
-                          </span>
-                        </div>
-                        {item.description && (
-                          <p className="text-sm text-zinc-500">{item.description}</p>
-                        )}
-                        {item.purchaseUrl && (
-                          <a
-                            href={item.purchaseUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-lime-400 hover:underline"
-                          >
-                            Link mua
-                          </a>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeletePrepareItem(item.id)}
-                        className="text-xs text-red-400 border border-red-500/40 px-3 py-1 rounded-lg hover:bg-red-500/10 transition-colors"
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  ))}
+                      {savingUpdate ? 'Đang lưu...' : 'Lưu thay đổi'}
+                    </button>
+                  </div>
                 </div>
               )}
-
-              <div className="mt-4 p-3 rounded-xl bg-neutral-900 border border-white/5 space-y-3">
-                <h4 className="font-semibold text-white">Thêm vật dụng</h4>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Tên vật dụng"
-                    value={newPrepare.name}
-                    onChange={(e) => setNewPrepare({ ...newPrepare, name: e.target.value })}
-                    className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  />
-                  <textarea
-                    placeholder="Mô tả (optional)"
-                    value={newPrepare.description}
-                    onChange={(e) => setNewPrepare({ ...newPrepare, description: e.target.value })}
-                    className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    rows={2}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Link mua (optional)"
-                    value={newPrepare.purchaseUrl}
-                    onChange={(e) => setNewPrepare({ ...newPrepare, purchaseUrl: e.target.value })}
-                    className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={newPrepare.category}
-                      onChange={(e) => setNewPrepare({ ...newPrepare, category: e.target.value })}
-                      className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    >
-                      {prepareCategoryOptions.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={newPrepare.iconName}
-                      onChange={(e) => setNewPrepare({ ...newPrepare, iconName: e.target.value })}
-                      className="bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                    >
-                      {[...iconOptions, 'package', 'box', 'shopping-bag'].map((icon) => (
-                        <option key={icon} value={icon}>
-                          {icon}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <label className="inline-flex items-center gap-2 text-sm text-white">
-                    <input
-                      type="checkbox"
-                      checked={newPrepare.isRequired}
-                      onChange={(e) =>
-                        setNewPrepare({ ...newPrepare, isRequired: e.target.checked })
-                      }
-                      className="accent-lime-400"
-                    />
-                    Bắt buộc
-                  </label>
-                  <button
-                    onClick={handleAddPrepareItem}
-                    className="w-full bg-lime-400 text-black font-bold py-2 rounded-lg active:scale-95 transition-all"
-                  >
-                    Thêm vật dụng
-                  </button>
-                </div>
-              </div>
             </section>
+
+            <TaskSection
+              tasks={tasks}
+              taskStats={taskStats}
+              taskQuery={taskQuery}
+              setTaskQuery={setTaskQuery}
+              taskViewMode={taskViewMode}
+              setTaskViewMode={setTaskViewMode}
+              taskFilterOptions={taskFilterOptions}
+              taskFilter={taskFilter}
+              setTaskFilter={setTaskFilter}
+              filteredTasks={filteredTasks}
+              resolveTaskId={resolveTaskId}
+              resolveTaskStateKey={resolveTaskStateKey}
+              getLogByTask={getLogByTask}
+              normalizeTaskStatus={normalizeTaskStatus}
+              taskEditing={taskEditing}
+              expandedTaskMap={expandedTaskMap}
+              iconOptions={iconOptions}
+              colorOptions={colorOptions}
+              prepareCategoryOptions={prepareCategoryOptions}
+              taskPrepareEditing={taskPrepareEditing}
+              setTaskPrepareEditing={setTaskPrepareEditing}
+              getTaskDraft={getTaskDraft}
+              setTaskPrepareDrafts={setTaskPrepareDrafts}
+              setTaskEditing={setTaskEditing}
+              setPreviewTask={setPreviewTask}
+              toggleTaskExpanded={toggleTaskExpanded}
+              createTaskEditDraft={createTaskEditDraft}
+              handleDeleteTask={handleDeleteTask}
+              deletingTaskId={deletingTaskId}
+              handleUpdateTask={handleUpdateTask}
+              savingTaskId={savingTaskId}
+              cancelTaskEdit={cancelTaskEdit}
+              handleTaskPrepareEdit={handleTaskPrepareEdit}
+              handleTaskPrepareDelete={handleTaskPrepareDelete}
+              handleTaskPrepareAdd={handleTaskPrepareAdd}
+              logLoading={logLoading}
+              logInputs={logInputs}
+              setLogInputs={setLogInputs}
+              evidenceInputs={evidenceInputs}
+              setEvidenceInputs={setEvidenceInputs}
+              evidenceFiles={evidenceFiles}
+              setEvidenceFiles={setEvidenceFiles}
+              handleCheckin={handleCheckin}
+              handleSkip={handleSkip}
+              handleUndo={handleUndo}
+              handleLogQuantity={handleLogQuantity}
+              handleEvidence={handleEvidence}
+              resolveEvidenceUrl={resolveEvidenceUrl}
+              isLikelyImageEvidence={isLikelyImageEvidence}
+              statusColor={statusColor}
+              statusLabel={statusLabel}
+              newTask={newTask}
+              setNewTask={setNewTask}
+              handleAddTask={handleAddTask}
+              adding={adding}
+            />
+
           </>
         )}
       </main>
 
-      {previewTask && (() => {
-        const taskId = resolveTaskId(previewTask);
-        const taskLog = getLogByTask(taskId || previewTask?.id || previewTask?.taskId);
-        const normalizedStatus = normalizeTaskStatus(taskLog?.status);
-        const evidenceUrl = resolveEvidenceUrl(taskLog);
-
-        return (
-          <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm p-4 md:p-8">
-            <div className="max-w-3xl mx-auto bg-[#111] border border-white/10 rounded-2xl p-4 md:p-6 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">Task Detail</p>
-                  <h3 className="text-xl font-bold text-white mt-1">
-                    {previewTask?.title || previewTask?.name || 'Task'}
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setPreviewTask(null)}
-                  className="px-3 py-1.5 rounded-lg border border-white/15 text-sm text-zinc-300 hover:text-white"
-                >
-                  Đóng
-                </button>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="p-3 rounded-xl bg-neutral-900 border border-white/10">
-                  <p className="text-zinc-500 text-xs">Trạng thái</p>
-                  <span
-                    className={`mt-1 inline-flex text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}
-                  >
-                    {statusLabel(normalizedStatus)}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-neutral-900 border border-white/10">
-                  <p className="text-zinc-500 text-xs">Mục tiêu</p>
-                  <p className="mt-1 text-white font-semibold">
-                    {previewTask?.targetValue ?? '-'} {previewTask?.unitName || ''}
-                  </p>
-                </div>
-              </div>
-
-              {previewTask?.description && (
-                <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10">
-                  <p className="text-zinc-500 text-xs">Mô tả</p>
-                  <p className="mt-1 text-sm text-zinc-200 whitespace-pre-wrap">{previewTask.description}</p>
-                </div>
-              )}
-
-              {typeof taskLog?.currentValue !== 'undefined' && (
-                <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10">
-                  <p className="text-zinc-500 text-xs">Giá trị hiện tại</p>
-                  <p className="mt-1 text-sm text-zinc-200">{taskLog.currentValue}</p>
-                </div>
-              )}
-
-              {evidenceUrl && (
-                <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10 space-y-2">
-                  <p className="text-zinc-500 text-xs">Minh chứng</p>
-                  {isLikelyImageEvidence(evidenceUrl) ? (
-                    <img
-                      src={evidenceUrl}
-                      alt="Task evidence"
-                      className="w-full max-h-[360px] object-contain rounded-lg border border-white/10 bg-black"
-                    />
-                  ) : (
-                    <a
-                      href={evidenceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-lime-400 hover:underline break-all"
-                    >
-                      {evidenceUrl}
-                    </a>
-                  )}
-                </div>
-              )}
-
-              <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-zinc-500 text-xs">Prepare items</p>
-                  <span className="text-zinc-500 text-xs">{previewTask?.prepareItems?.length || 0} item(s)</span>
-                </div>
-                {previewTask?.prepareItems?.length ? (
-                  <div className="mt-2 space-y-2">
-                    {previewTask.prepareItems.map((item) => (
-                      <div key={item.id} className="p-2 rounded-lg bg-black/30 border border-white/5">
-                        <p className="text-sm text-white font-semibold">{item.name}</p>
-                        <p className="text-xs text-zinc-500">{item.category}</p>
-                        {item.description && <p className="text-xs text-zinc-400 mt-1">{item.description}</p>}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-2 text-xs text-zinc-600">Chưa có vật dụng.</p>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {previewTask && (
+        <TaskPreviewModal
+          previewTask={previewTask}
+          taskLog={getLogByTask(resolveTaskId(previewTask) || previewTask?.id || previewTask?.taskId)}
+          onClose={() => setPreviewTask(null)}
+          normalizeTaskStatus={normalizeTaskStatus}
+          statusLabel={statusLabel}
+          statusColor={statusColor}
+          resolveEvidenceUrl={resolveEvidenceUrl}
+          isLikelyImageEvidence={isLikelyImageEvidence}
+        />
+      )}
 
       <BottomNav activeItem="target" />
     </div>
