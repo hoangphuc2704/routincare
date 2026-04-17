@@ -174,6 +174,13 @@ POST /task-logs/checkin { task_id }
 | POST   | `/subscriptions/webhook/payos`      | [-]    | Webhook PayOS (async callback)                         | ✅      |
 | GET    | `/payments/me`                      | [*]    | Lịch sử thanh toán của user                            | ✅      |
 | GET    | `/payments`                         | [A]    | Tất cả lịch sử thanh toán (admin)                      | ✅      |
+| GET    | `/payments/manage`                  | [A]    | Quản lý giao dịch nâng cao (filter status/user/date/keyword + pagination) | ✅ |
+| GET    | `/payments/order/:orderCode`        | [A]    | Tra cứu giao dịch theo `orderCode`                     | ✅      |
+| GET    | `/payments/users/:userId`           | [A]    | Danh sách giao dịch theo user                          | ✅      |
+| GET    | `/payments/revenue/summary`         | [A]    | Tổng quan doanh thu (`fromDate`,`toDate`)              | ✅      |
+| GET    | `/payments/revenue/by-plan`         | [A]    | Doanh thu theo từng gói (`fromDate`,`toDate`)          | ✅      |
+| GET    | `/payments/revenue/by-month`        | [A]    | Doanh thu theo tháng (chart line/bar)                  | ✅      |
+| GET    | `/payments/revenue/top-plans`       | [A]    | Top gói có doanh thu cao nhất                          | ✅      |
 | GET    | `/payments/:id`                     | [A]    | Chi tiết một giao dịch                                 | ✅      |
 | PATCH  | `/payments/:id/status`              | [A]    | Cập nhật trạng thái giao dịch (admin)                  | ✅      |
 | POST   | `/payments/callback/payos`          | [-]    | Webhook PayOS (callback endpoint alias)                | ✅      |
@@ -233,6 +240,159 @@ POST /task-logs/checkin { task_id }
 - AI routine suggestions
 - Detailed analytics & streak history
 - Unlimited public routines
+
+### 6.3 Transaction & Revenue Management (Admin)
+
+**A. Quản lý giao dịch nâng cao**
+
+`GET /payments/manage`
+
+Query params:
+- `status`: `Pending|Success|Failed|Refunded`
+- `userId`: UUID
+- `orderCode`: long
+- `fromDate`, `toDate`: ISO datetime
+- `keyword`: tìm theo tên/email user, orderCode, transactionId
+- `page`, `pageSize`
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "pageSize": 20,
+    "totalItems": 125,
+    "totalPages": 7,
+    "items": [
+      {
+        "transactionId": "uuid",
+        "orderCode": 625164464419,
+        "userId": "uuid",
+        "planId": "uuid",
+        "planName": "Premium Monthly",
+        "amount": 49000,
+        "currency": "VND",
+        "status": "Success",
+        "createdAt": "2026-04-08T13:12:54Z",
+        "updatedAt": "2026-04-08T13:12:59Z"
+      }
+    ]
+  },
+  "message": ""
+}
+```
+
+**B. Tổng quan doanh thu**
+
+`GET /payments/revenue/summary?fromDate=2026-04-01T00:00:00Z&toDate=2026-04-30T23:59:59Z`
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "fromDate": "2026-04-01T00:00:00Z",
+    "toDate": "2026-04-30T23:59:59Z",
+    "totalRevenue": 1880000,
+    "totalRefunded": 98000,
+    "netRevenue": 1782000,
+    "successfulTransactions": 42,
+    "refundedTransactions": 2,
+    "failedTransactions": 6,
+    "pendingTransactions": 3
+  },
+  "message": ""
+}
+```
+
+**C. Doanh thu theo gói**
+
+`GET /payments/revenue/by-plan?fromDate=2026-04-01T00:00:00Z&toDate=2026-04-30T23:59:59Z`
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "fromDate": "2026-04-01T00:00:00Z",
+    "toDate": "2026-04-30T23:59:59Z",
+    "totalRevenue": 1880000,
+    "plans": [
+      {
+        "planId": "uuid-monthly",
+        "planName": "Premium Monthly",
+        "revenue": 980000,
+        "successfulTransactions": 20,
+        "averageOrderValue": 49000
+      },
+      {
+        "planId": "uuid-yearly",
+        "planName": "Premium Yearly",
+        "revenue": 900000,
+        "successfulTransactions": 9,
+        "averageOrderValue": 100000
+      }
+    ]
+  },
+  "message": ""
+}
+```
+
+**D. Doanh thu theo tháng (chart data)**
+
+`GET /payments/revenue/by-month?fromDate=2026-01-01T00:00:00Z&toDate=2026-12-31T23:59:59Z`
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "fromDate": "2026-01-01T00:00:00Z",
+    "toDate": "2026-12-31T23:59:59Z",
+    "totalRevenue": 5120000,
+    "items": [
+      { "year": 2026, "month": 1, "label": "2026-01", "revenue": 1280000, "successfulTransactions": 23 },
+      { "year": 2026, "month": 2, "label": "2026-02", "revenue": 1640000, "successfulTransactions": 31 },
+      { "year": 2026, "month": 3, "label": "2026-03", "revenue": 2200000, "successfulTransactions": 39 }
+    ]
+  },
+  "message": ""
+}
+```
+
+**E. Top gói doanh thu cao**
+
+`GET /payments/revenue/top-plans?top=5&fromDate=2026-04-01T00:00:00Z&toDate=2026-04-30T23:59:59Z`
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "planId": "uuid-monthly",
+      "planName": "Premium Monthly",
+      "revenue": 980000,
+      "successfulTransactions": 20,
+      "averageOrderValue": 49000
+    },
+    {
+      "planId": "uuid-yearly",
+      "planName": "Premium Yearly",
+      "revenue": 900000,
+      "successfulTransactions": 9,
+      "averageOrderValue": 100000
+    }
+  ],
+  "message": ""
+}
+```
 
 ---
 
