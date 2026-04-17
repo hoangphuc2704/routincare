@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Eye, Clock3 } from 'lucide-react';
+import { ArrowLeft, Calendar, Eye, Clock3, Search, LayoutGrid, Rows3, ChevronDown, ChevronUp } from 'lucide-react';
 import { message } from 'antd';
 import BottomNav from '../../../components/BottomNav';
 import routineApi from '../../../api/routineApi';
 import taskLogApi from '../../../api/taskLogApi';
+import mediaApi from '../../../api/mediaApi';
 
 const RoutineDetailPage = () => {
   const { id } = useParams();
@@ -48,6 +49,72 @@ const RoutineDetailPage = () => {
   const [taskPrepareDrafts, setTaskPrepareDrafts] = useState({});
   const [taskPrepareEditing, setTaskPrepareEditing] = useState({});
   const [evidenceFiles, setEvidenceFiles] = useState({});
+  const [taskEditing, setTaskEditing] = useState({});
+  const [savingTaskId, setSavingTaskId] = useState(null);
+  const [deletingTaskId, setDeletingTaskId] = useState(null);
+  const [previewTask, setPreviewTask] = useState(null);
+  const [taskQuery, setTaskQuery] = useState('');
+  const [taskFilter, setTaskFilter] = useState('all');
+  const [taskViewMode, setTaskViewMode] = useState('grid');
+  const [expandedTaskMap, setExpandedTaskMap] = useState({});
+
+  const normalizeId = (value) => String(value ?? '').trim();
+
+  const normalizeTaskStatus = (value) => {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+
+    const str = String(value || '').trim().toLowerCase();
+    if (['completed', 'done', 'success'].includes(str)) return 1;
+    if (['skipped', 'skip'].includes(str)) return 2;
+    return 0;
+  };
+
+  const normalizePrepareCategoryLabel = (value) => {
+    const parsed = Number(value);
+    if (parsed === 0) return 'Equipment';
+    if (parsed === 1) return 'Accessory';
+    if (parsed === 2) return 'Food';
+    if (parsed === 3) return 'Other';
+
+    const str = String(value || '').trim().toLowerCase();
+    if (str === 'equipment') return 'Equipment';
+    if (str === 'accessory') return 'Accessory';
+    if (str === 'food') return 'Food';
+    return 'Other';
+  };
+
+  const resolveTaskId = (task) => task?.id || task?.taskId || task?.routineTaskId || null;
+
+  const resolveTaskStateKey = (task, index) => {
+    const resolvedId = resolveTaskId(task);
+    const normalized = normalizeId(resolvedId);
+    if (normalized) return normalized;
+    return `task-index-${index}`;
+  };
+
+  const normalizeTaskUnitType = (value) => {
+    const parsed = Number(value);
+    if (parsed === 0) return 'Checkbox';
+    if (parsed === 1) return 'Number';
+
+    const str = String(value || '').trim().toLowerCase();
+    if (['checkbox', 'boolean', 'done', 'check'].includes(str)) return 'Checkbox';
+    if (['number', 'numeric', 'ml', 'value', 'quantity'].includes(str)) return 'Number';
+    return 'Checkbox';
+  };
+
+  const resolveEvidenceUrl = (log) =>
+    log?.evidenceUrl || log?.evidenceURL || log?.evidence_url || log?.evidence?.url || null;
+
+  const isLikelyImageEvidence = (url) => {
+    const str = String(url || '').toLowerCase();
+    return (
+      str.startsWith('data:image/') ||
+      /\.(png|jpg|jpeg|gif|webp|bmp|svg)(\?|$)/.test(str) ||
+      str.includes('res.cloudinary.com')
+    );
+  };
 
   const normalizeRemindTimeForInput = (value) => {
     if (!value) return '';
@@ -127,7 +194,18 @@ const RoutineDetailPage = () => {
       setLogLoading(true);
       const res = await taskLogApi.getToday();
       const data = res.data?.data || res.data || [];
-      setLogs(data);
+      const list = Array.isArray(data)
+        ? data
+        : data?.items || data?.results || data?.$values || data?.data || [];
+
+      const normalized = (Array.isArray(list) ? list : []).map((item) => ({
+        ...item,
+        id: item?.id || item?.taskLogId || item?.logId || null,
+        taskId: item?.taskId || item?.task_id || item?.task?.id || item?.task?.taskId || null,
+        status: normalizeTaskStatus(item?.status ?? item?.statusName ?? item?.taskStatus),
+      }));
+
+      setLogs(normalized);
     } catch (err) {
       console.error('Failed to fetch task logs:', err.response?.data || err);
     } finally {
@@ -172,7 +250,40 @@ const RoutineDetailPage = () => {
 
     for (const candidate of taskCandidates) {
       const resolved = resolveTaskArray(candidate);
-      if (resolved.length > 0) return resolved;
+      if (resolved.length > 0) {
+        return resolved.map((task, index) => {
+          const taskPrepareCandidates = [
+            task?.prepareItems,
+            task?.prepareItemDtos,
+            task?.prepareItemDTOs,
+            task?.taskPrepareItems,
+            task?.taskPrepareItemDtos,
+            task?.taskPrepareItemDTOs,
+          ];
+
+          let taskPrepareItems = [];
+          for (const prepareCandidate of taskPrepareCandidates) {
+            const resolvedPrepare = resolveTaskArray(prepareCandidate);
+            if (resolvedPrepare.length > 0) {
+              taskPrepareItems = resolvedPrepare;
+              break;
+            }
+          }
+
+          return {
+            ...task,
+            id: task?.id || task?.taskId || `task-${index}`,
+            taskId: task?.taskId || task?.id || null,
+            prepareItems: Array.isArray(taskPrepareItems)
+              ? taskPrepareItems.map((item, itemIndex) => ({
+                  ...item,
+                  id: item?.id || item?.prepareItemId || `prepare-${index}-${itemIndex}`,
+                  category: normalizePrepareCategoryLabel(item?.category),
+                }))
+              : [],
+          };
+        });
+      }
     }
 
     for (const candidate of taskCandidates) {
@@ -182,12 +293,12 @@ const RoutineDetailPage = () => {
     return [];
   };
 
-  const todayStr = () => new Date().toISOString().slice(0, 10);
-  const getLogByTask = (taskId) => logs.find((log) => log.taskId === taskId);
+  const getLogByTask = (taskId) =>
+    logs.find((log) => normalizeId(log?.taskId) === normalizeId(taskId));
   const tasks = resolveTasksFromRoutine(routine);
   const prepareItems = routine?.prepareItems || [];
   const completedCount = tasks.reduce(
-    (sum, t) => (getLogByTask(t.id || t.taskId)?.status === 1 ? sum + 1 : sum),
+    (sum, t) => (normalizeTaskStatus(getLogByTask(resolveTaskId(t))?.status) === 1 ? sum + 1 : sum),
     0
   );
   const statusLabel = (status) => {
@@ -199,6 +310,73 @@ const RoutineDetailPage = () => {
     if (status === 1) return 'text-[#22C55E] bg-[#22C55E]/10 border-[#22C55E]/30';
     if (status === 2) return 'text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/30';
     return 'text-[#F97316] bg-[#F97316]/10 border-[#F97316]/30';
+  };
+
+  const getTaskNormalizedStatus = (task) =>
+    normalizeTaskStatus(getLogByTask(resolveTaskId(task))?.status);
+
+  const taskStats = tasks.reduce(
+    (acc, task) => {
+      const status = getTaskNormalizedStatus(task);
+      acc.total += 1;
+      if (status === 1) acc.completed += 1;
+      else if (status === 2) acc.skipped += 1;
+      else acc.inProgress += 1;
+      return acc;
+    },
+    { total: 0, inProgress: 0, completed: 0, skipped: 0 }
+  );
+
+  const taskFilterOptions = [
+    { value: 'all', label: 'All', count: taskStats.total },
+    { value: 'inprogress', label: 'InProgress', count: taskStats.inProgress },
+    { value: 'completed', label: 'Completed', count: taskStats.completed },
+    { value: 'skipped', label: 'Skipped', count: taskStats.skipped },
+  ];
+
+  const filteredTasks = tasks.filter((task) => {
+    const keyword = taskQuery.trim().toLowerCase();
+    const title = String(task?.title || task?.name || '').toLowerCase();
+    const matchKeyword = !keyword || title.includes(keyword);
+    if (!matchKeyword) return false;
+
+    if (taskFilter === 'all') return true;
+    const status = getTaskNormalizedStatus(task);
+    if (taskFilter === 'completed') return status === 1;
+    if (taskFilter === 'skipped') return status === 2;
+    return status === 0;
+  });
+
+  const toggleTaskExpanded = (taskKey) => {
+    setExpandedTaskMap((prev) => ({ ...prev, [taskKey]: !prev[taskKey] }));
+  };
+
+  const createTaskEditDraft = (task) => {
+    const taskId = resolveTaskId(task);
+    if (!taskId) {
+      message.warning('Không tìm thấy taskId hợp lệ');
+      return;
+    }
+
+    setTaskEditing((prev) => ({
+      ...prev,
+      [taskId]: {
+        title: task?.title || task?.name || '',
+        unitType: normalizeTaskUnitType(task?.unitType),
+        targetValue: task?.targetValue ?? 1,
+        unitName: task?.unitName || 'times',
+        iconName: task?.iconName || 'droplet',
+        iconColor: task?.iconColor || '#22C55E',
+      },
+    }));
+  };
+
+  const cancelTaskEdit = (taskId) => {
+    setTaskEditing((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
   };
 
   const handleUpdateRoutine = async () => {
@@ -320,6 +498,10 @@ const RoutineDetailPage = () => {
   const getTaskDraft = (taskId) => taskPrepareDrafts[taskId] || defaultPreparePayload();
 
   const handleTaskPrepareAdd = async (taskId) => {
+    if (!taskId) {
+      message.warning('Không tìm thấy taskId hợp lệ');
+      return;
+    }
     const draft = getTaskDraft(taskId);
     if (!draft.name.trim()) {
       message.warning('Nhập tên vật dụng');
@@ -334,7 +516,9 @@ const RoutineDetailPage = () => {
         iconName: draft.iconName || 'package',
         category: categoryMap[draft.category] ?? 0,
         isRequired: !!draft.isRequired,
-        orderIndex: tasks.find((t) => (t.id || t.taskId) === taskId)?.prepareItems?.length || 0,
+        orderIndex:
+          tasks.find((t) => normalizeId(resolveTaskId(t)) === normalizeId(taskId))?.prepareItems
+            ?.length || 0,
       };
       await routineApi.addTaskPrepareItem(id, taskId, payload);
       message.success('Đã thêm vật dụng cho task');
@@ -357,6 +541,10 @@ const RoutineDetailPage = () => {
   };
 
   const handleTaskPrepareEdit = async (taskId, itemId) => {
+    if (!taskId) {
+      message.warning('Không tìm thấy taskId hợp lệ');
+      return;
+    }
     const draft = taskPrepareEditing[itemId];
     if (!draft?.name?.trim()) {
       message.warning('Nhập tên vật dụng');
@@ -388,6 +576,10 @@ const RoutineDetailPage = () => {
   };
 
   const handleTaskPrepareDelete = async (taskId, itemId) => {
+    if (!taskId) {
+      message.warning('Không tìm thấy taskId hợp lệ');
+      return;
+    }
     if (!window.confirm('Xóa vật dụng này?')) return;
     try {
       await routineApi.deleteTaskPrepareItem(id, taskId, itemId);
@@ -471,9 +663,72 @@ const RoutineDetailPage = () => {
     }
   };
 
-  const handleCheckin = async (taskId) => {
+  const handleUpdateTask = async (taskId) => {
+    const draft = taskEditing[taskId];
+    if (!taskId || !draft) {
+      message.warning('Thiếu dữ liệu task để cập nhật');
+      return;
+    }
+    if (!draft.title?.trim()) {
+      message.warning('Nhập tên task');
+      return;
+    }
+
     try {
-      await taskLogApi.checkin({ taskId, date: todayStr() });
+      setSavingTaskId(taskId);
+      const payload = {
+        title: draft.title.trim(),
+        unitType: draft.unitType === 'Number' ? 1 : 0,
+        targetValue:
+          draft.unitType === 'Number'
+            ? Math.max(1, Number.parseInt(draft.targetValue, 10) || 1)
+            : 1,
+        unitName: draft.unitType === 'Number' ? draft.unitName?.trim() || 'ml' : 'times',
+        iconName: draft.iconName || 'droplet',
+        iconColor: draft.iconColor || '#22C55E',
+      };
+
+      await routineApi.updateTask(id, taskId, payload);
+      message.success('Đã cập nhật task');
+      cancelTaskEdit(taskId);
+      fetchRoutine();
+    } catch (err) {
+      console.error('Update task failed:', err.response?.data || err);
+      message.error(err.response?.data?.message || 'Không thể cập nhật task');
+    } finally {
+      setSavingTaskId(null);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (!taskId) {
+      message.warning('Không tìm thấy taskId hợp lệ');
+      return;
+    }
+    if (!window.confirm('Xóa task này?')) return;
+
+    try {
+      setDeletingTaskId(taskId);
+      await routineApi.deleteTask(id, taskId);
+      message.success('Đã xóa task');
+      cancelTaskEdit(taskId);
+      fetchRoutine();
+      fetchLogs();
+    } catch (err) {
+      console.error('Delete task failed:', err.response?.data || err);
+      message.error(err.response?.data?.message || 'Không thể xóa task');
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
+
+  const handleCheckin = async (taskId, currentStatus) => {
+    if (normalizeTaskStatus(currentStatus) === 1) {
+      message.info('Task đã hoàn thành. Dùng Hủy log để check-in lại.');
+      return;
+    }
+    try {
+      await taskLogApi.checkin({ taskId });
       message.success('Đã check-in');
       fetchLogs();
     } catch (err) {
@@ -483,6 +738,10 @@ const RoutineDetailPage = () => {
   };
 
   const handleLogQuantity = async (taskId) => {
+    if (!taskId) {
+      message.warning('Không tìm thấy taskId hợp lệ');
+      return;
+    }
     const value = parseInt(logInputs[taskId], 10);
     if (!Number.isFinite(value) || value < 0) {
       message.warning('Nhập giá trị số hợp lệ');
@@ -513,13 +772,59 @@ const RoutineDetailPage = () => {
     }
   };
 
-  const fileToDataUrl = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (e) => reject(e);
-      reader.readAsDataURL(file);
+  const isValidHttpUrl = (value) => {
+    if (!value) return false;
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch (err) {
+      return false;
+    }
+  };
+
+  const uploadEvidenceImage = async (file) => {
+    if (!file.type?.startsWith('image/')) {
+      throw new Error('Vui lòng chọn file ảnh hợp lệ');
+    }
+
+    const maxSize = 8 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error('Ảnh tối đa 8MB');
+    }
+
+    const signRes = await mediaApi.signUpload({ folder: 'routin/evidence', resourceType: 'image' });
+    const signData = signRes.data?.data || signRes.data;
+
+    if (!signData?.uploadUrl || !signData?.apiKey || !signData?.timestamp || !signData?.signature) {
+      throw new Error('Không lấy được thông tin upload ảnh');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', String(signData.apiKey));
+    formData.append('timestamp', String(signData.timestamp));
+    formData.append('signature', String(signData.signature));
+    if (signData.folder) {
+      formData.append('folder', String(signData.folder));
+    }
+
+    const uploadRes = await fetch(signData.uploadUrl, {
+      method: 'POST',
+      body: formData,
     });
+
+    if (!uploadRes.ok) {
+      throw new Error('Tải ảnh minh chứng thất bại');
+    }
+
+    const uploaded = await uploadRes.json();
+    const secureUrl = uploaded.secure_url || uploaded.url;
+    if (!secureUrl) {
+      throw new Error('Upload thành công nhưng không có URL ảnh');
+    }
+
+    return secureUrl;
+  };
 
   const handleEvidence = async (logId, taskId) => {
     const url = evidenceInputs[taskId]?.trim();
@@ -528,10 +833,18 @@ const RoutineDetailPage = () => {
       message.warning('Nhập URL hoặc chọn ảnh');
       return;
     }
+    if (!logId) {
+      message.warning('Bạn cần check-in task trước khi thêm minh chứng');
+      return;
+    }
+    if (url && !isValidHttpUrl(url)) {
+      message.warning('Evidence URL không hợp lệ');
+      return;
+    }
     try {
       let evidencePayload = url || null;
       if (file) {
-        evidencePayload = await fileToDataUrl(file);
+        evidencePayload = await uploadEvidenceImage(file);
       }
       await taskLogApi.updateEvidence(logId, { evidenceUrl: evidencePayload });
       message.success('Đã cập nhật minh chứng');
@@ -587,7 +900,7 @@ const RoutineDetailPage = () => {
         </div>
       </header>
 
-      <main className="px-4 md:max-w-md md:mx-auto space-y-6">
+      <main className="px-4 md:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-lime-400"></div>
@@ -706,15 +1019,94 @@ const RoutineDetailPage = () => {
                 <h3 className="text-lg font-bold">Tasks</h3>
                 <span className="text-xs text-zinc-500">{tasks.length} task(s)</span>
               </div>
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
+                    <p className="text-[10px] text-zinc-500">Total</p>
+                    <p className="text-sm font-semibold text-white">{taskStats.total}</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
+                    <p className="text-[10px] text-zinc-500">InProgress</p>
+                    <p className="text-sm font-semibold text-[#F97316]">{taskStats.inProgress}</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
+                    <p className="text-[10px] text-zinc-500">Completed</p>
+                    <p className="text-sm font-semibold text-[#22C55E]">{taskStats.completed}</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/10">
+                    <p className="text-[10px] text-zinc-500">Skipped</p>
+                    <p className="text-sm font-semibold text-[#EF4444]">{taskStats.skipped}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="text"
+                      value={taskQuery}
+                      onChange={(e) => setTaskQuery(e.target.value)}
+                      placeholder="Tìm task..."
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/30 border border-white/10 text-sm text-white"
+                    />
+                  </div>
+                  <div className="inline-flex rounded-xl bg-black/30 border border-white/10 p-1">
+                    <button
+                      onClick={() => setTaskViewMode('grid')}
+                      className={`px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 ${taskViewMode === 'grid' ? 'bg-white text-black font-semibold' : 'text-zinc-300'}`}
+                    >
+                      <LayoutGrid size={14} /> Grid
+                    </button>
+                    <button
+                      onClick={() => setTaskViewMode('list')}
+                      className={`px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 ${taskViewMode === 'list' ? 'bg-white text-black font-semibold' : 'text-zinc-300'}`}
+                    >
+                      <Rows3 size={14} /> List
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {taskFilterOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setTaskFilter(opt.value)}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs border ${taskFilter === opt.value ? 'bg-white text-black border-white font-semibold' : 'bg-black/30 text-zinc-300 border-white/10'}`}
+                    >
+                      {opt.label} ({opt.count})
+                    </button>
+                  ))}
+                </div>
+              </div>
               {tasks.length === 0 ? (
                 <p className="text-sm text-zinc-500">Chưa có task nào trong routine này.</p>
+              ) : filteredTasks.length === 0 ? (
+                <p className="text-sm text-zinc-500">Không có task phù hợp với bộ lọc hiện tại.</p>
               ) : (
-                <div className="space-y-3">
-                  {tasks.map((task) => (
+                <div
+                  className={
+                    taskViewMode === 'grid'
+                      ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3'
+                      : 'grid grid-cols-1 gap-3'
+                  }
+                >
+                  {filteredTasks.map((task, taskIndex) => (
                     <div
-                      key={task.id || task.taskId}
-                      className="p-3 rounded-xl bg-neutral-900 border border-white/5"
+                      key={resolveTaskStateKey(task, taskIndex)}
+                      className="p-3 rounded-xl bg-neutral-900 border border-white/5 h-fit"
                     >
+                      {(() => {
+                        const taskId = resolveTaskId(task);
+                        const taskStateKey = resolveTaskStateKey(task, taskIndex);
+                        const taskLog = getLogByTask(taskId || task.id || task.taskId);
+                        const normalizedStatus = normalizeTaskStatus(taskLog?.status);
+                        const editingTask = taskEditing[taskId];
+                        const isExpanded = !!expandedTaskMap[taskStateKey];
+                        return (
+                          <>
+                      <div className="mb-2 text-[11px] uppercase tracking-[0.15em] text-zinc-500 font-semibold">
+                        Task {taskIndex + 1}
+                      </div>
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <h4 className="font-semibold text-white">{task.title || task.name}</h4>
@@ -729,12 +1121,153 @@ const RoutineDetailPage = () => {
                             </p>
                           )}
                         </div>
-                        <span
-                          className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(getLogByTask(task.id || task.taskId)?.status)}`}
-                        >
-                          {statusLabel(getLogByTask(task.id || task.taskId)?.status)}
-                        </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <span
+                            className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}
+                          >
+                            {statusLabel(normalizedStatus)}
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setPreviewTask(task)}
+                              className="text-[11px] px-2 py-1 rounded-lg border border-lime-400/40 text-lime-300"
+                            >
+                              Xem popup
+                            </button>
+                            <button
+                              onClick={() => toggleTaskExpanded(taskStateKey)}
+                              className="text-[11px] px-2 py-1 rounded-lg border border-white/10 text-zinc-200 inline-flex items-center gap-1"
+                            >
+                              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                              {isExpanded ? 'Thu gọn' : 'Mở rộng'}
+                            </button>
+                            <button
+                              onClick={() => createTaskEditDraft(task)}
+                              className="text-[11px] px-2 py-1 rounded-lg border border-white/10 text-white"
+                            >
+                              Sửa task
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(taskId)}
+                              disabled={deletingTaskId === taskId}
+                              className="text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-400 disabled:opacity-60"
+                            >
+                              {deletingTaskId === taskId ? 'Đang xóa...' : 'Xóa task'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
+                      {isExpanded && editingTask && (
+                        <div className="mt-3 p-3 rounded-xl bg-neutral-800 border border-white/10 space-y-2">
+                          <input
+                            type="text"
+                            value={editingTask.title}
+                            onChange={(e) =>
+                              setTaskEditing((prev) => ({
+                                ...prev,
+                                [taskId]: { ...editingTask, title: e.target.value },
+                              }))
+                            }
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                            placeholder="Tên task"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <select
+                              value={editingTask.unitType}
+                              onChange={(e) =>
+                                setTaskEditing((prev) => ({
+                                  ...prev,
+                                  [taskId]: { ...editingTask, unitType: e.target.value },
+                                }))
+                              }
+                              className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                            >
+                              <option value="Checkbox">Checkbox</option>
+                              <option value="Number">Number</option>
+                            </select>
+                            <select
+                              value={editingTask.iconName}
+                              onChange={(e) =>
+                                setTaskEditing((prev) => ({
+                                  ...prev,
+                                  [taskId]: { ...editingTask, iconName: e.target.value },
+                                }))
+                              }
+                              className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                            >
+                              {iconOptions.map((icon) => (
+                                <option key={icon} value={icon}>
+                                  {icon}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {editingTask.unitType === 'Number' && (
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={editingTask.targetValue}
+                                onChange={(e) =>
+                                  setTaskEditing((prev) => ({
+                                    ...prev,
+                                    [taskId]: { ...editingTask, targetValue: e.target.value },
+                                  }))
+                                }
+                                className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                                placeholder="Target"
+                              />
+                              <input
+                                type="text"
+                                value={editingTask.unitName}
+                                onChange={(e) =>
+                                  setTaskEditing((prev) => ({
+                                    ...prev,
+                                    [taskId]: { ...editingTask, unitName: e.target.value },
+                                  }))
+                                }
+                                className="bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                                placeholder="Unit"
+                              />
+                            </div>
+                          )}
+                          <div className="grid grid-cols-3 gap-2">
+                            {colorOptions.map((color) => {
+                              const active = editingTask.iconColor === color;
+                              return (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() =>
+                                    setTaskEditing((prev) => ({
+                                      ...prev,
+                                      [taskId]: { ...editingTask, iconColor: color },
+                                    }))
+                                  }
+                                  className={`h-8 rounded-lg border ${active ? 'border-lime-400 ring-2 ring-lime-400/50' : 'border-white/10'}`}
+                                  style={{ backgroundColor: color }}
+                                />
+                              );
+                            })}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleUpdateTask(taskId)}
+                              disabled={savingTaskId === taskId}
+                              className="flex-1 bg-lime-400 text-black font-bold py-2 rounded-lg disabled:opacity-60"
+                            >
+                              {savingTaskId === taskId ? 'Đang lưu...' : 'Lưu task'}
+                            </button>
+                            <button
+                              onClick={() => cancelTaskEdit(taskId)}
+                              className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm"
+                            >
+                              Hủy
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {isExpanded && (
                       <div className="mt-3 p-3 rounded-xl bg-neutral-800 border border-white/10 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-zinc-400">Check-in / Log</span>
@@ -742,27 +1275,28 @@ const RoutineDetailPage = () => {
                             <span className="text-[11px] text-zinc-500">Đang tải...</span>
                           ) : (
                             <span
-                              className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(getLogByTask(task.id || task.taskId)?.status)}`}
+                              className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}
                             >
-                              {statusLabel(getLogByTask(task.id || task.taskId)?.status)}
+                              {statusLabel(normalizedStatus)}
                             </span>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <button
-                            onClick={() => handleCheckin(task.id || task.taskId)}
-                            className="px-3 py-2 rounded-lg bg-[#22C55E] text-black text-sm font-bold active:scale-95"
+                            onClick={() => handleCheckin(taskId, normalizedStatus)}
+                            disabled={normalizedStatus === 1}
+                            className="px-3 py-2 rounded-lg bg-[#22C55E] text-black text-sm font-bold active:scale-95 disabled:opacity-60"
                           >
                             Check-in
                           </button>
                           <button
-                            onClick={() => handleSkip(getLogByTask(task.id || task.taskId)?.id)}
+                            onClick={() => handleSkip(taskLog?.id)}
                             className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm active:scale-95"
                           >
                             Skip
                           </button>
                           <button
-                            onClick={() => handleUndo(getLogByTask(task.id || task.taskId)?.id)}
+                            onClick={() => handleUndo(taskLog?.id)}
                             className="px-3 py-2 rounded-lg border border-[#EF4444]/40 text-[#EF4444] text-sm active:scale-95"
                           >
                             Hủy log
@@ -774,18 +1308,18 @@ const RoutineDetailPage = () => {
                           <input
                             type="number"
                             min="0"
-                            value={logInputs[task.id || task.taskId] || ''}
+                            value={logInputs[taskStateKey] || ''}
                             onChange={(e) =>
                               setLogInputs((prev) => ({
                                 ...prev,
-                                [task.id || task.taskId]: e.target.value,
+                                [taskStateKey]: e.target.value,
                               }))
                             }
                             className="col-span-2 bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                             placeholder="Giá trị (ml, reps...)"
                           />
                           <button
-                            onClick={() => handleLogQuantity(task.id || task.taskId)}
+                            onClick={() => handleLogQuantity(taskId)}
                             className="w-full bg-white text-black font-bold py-2 rounded-lg active:scale-95 text-sm"
                           >
                             Ghi log
@@ -797,11 +1331,11 @@ const RoutineDetailPage = () => {
                           <div className="grid grid-cols-3 gap-2 items-center">
                             <input
                               type="text"
-                              value={evidenceInputs[task.id || task.taskId] || ''}
+                              value={evidenceInputs[taskStateKey] || ''}
                               onChange={(e) =>
                                 setEvidenceInputs((prev) => ({
                                   ...prev,
-                                  [task.id || task.taskId]: e.target.value,
+                                  [taskStateKey]: e.target.value,
                                 }))
                               }
                               className="col-span-2 bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
@@ -810,8 +1344,8 @@ const RoutineDetailPage = () => {
                             <button
                               onClick={() =>
                                 handleEvidence(
-                                  getLogByTask(task.id || task.taskId)?.id,
-                                  task.id || task.taskId
+                                  taskLog?.id,
+                                  taskId
                                 )
                               }
                               className="w-full bg-zinc-200 text-black font-bold py-2 rounded-lg active:scale-95 text-sm"
@@ -827,24 +1361,47 @@ const RoutineDetailPage = () => {
                                 const file = e.target.files?.[0];
                                 setEvidenceFiles((prev) => ({
                                   ...prev,
-                                  [task.id || task.taskId]: file,
+                                  [taskStateKey]: file,
                                 }));
                               }}
                               className="col-span-2 text-xs text-white"
                             />
                             <span className="text-[11px] text-zinc-500">
-                              {evidenceFiles[task.id || task.taskId]?.name || 'Chọn ảnh'}
+                              {evidenceFiles[taskStateKey]?.name || 'Chọn ảnh'}
                             </span>
                           </div>
                         </div>
-                        {getLogByTask(task.id || task.taskId)?.currentValue !== undefined && (
+                        {taskLog?.currentValue !== undefined && (
                           <p className="text-[11px] text-zinc-500">
-                            Giá trị hiện tại: {getLogByTask(task.id || task.taskId)?.currentValue}
+                            Giá trị hiện tại: {taskLog?.currentValue}
                           </p>
                         )}
+                        {resolveEvidenceUrl(taskLog) && (
+                          <div className="p-2 rounded-lg bg-neutral-900 border border-white/10 space-y-2">
+                            <p className="text-[11px] text-zinc-500">Minh chứng đã lưu</p>
+                            {isLikelyImageEvidence(resolveEvidenceUrl(taskLog)) ? (
+                              <img
+                                src={resolveEvidenceUrl(taskLog)}
+                                alt="Evidence"
+                                className="w-full max-h-52 object-cover rounded-lg border border-white/10"
+                              />
+                            ) : (
+                              <a
+                                href={resolveEvidenceUrl(taskLog)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-lime-400 hover:underline break-all"
+                              >
+                                {resolveEvidenceUrl(taskLog)}
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
+                      )}
 
                       {/* Task-level prepare items (placed after log for clarity) */}
+                      {isExpanded && (
                       <div className="mt-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-zinc-500">Prepare items</span>
@@ -951,7 +1508,7 @@ const RoutineDetailPage = () => {
                                       <div className="flex gap-2">
                                         <button
                                           onClick={() =>
-                                            handleTaskPrepareEdit(task.id || task.taskId, p.id)
+                                                handleTaskPrepareEdit(resolveTaskId(task), p.id)
                                           }
                                           className="flex-1 bg-lime-400 text-black font-bold py-2 rounded-lg active:scale-95 transition-all"
                                         >
@@ -1007,7 +1564,7 @@ const RoutineDetailPage = () => {
                                         </button>
                                         <button
                                           onClick={() =>
-                                            handleTaskPrepareDelete(task.id || task.taskId, p.id)
+                                            handleTaskPrepareDelete(resolveTaskId(task), p.id)
                                           }
                                           className="text-xs px-3 py-1 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10"
                                         >
@@ -1032,12 +1589,12 @@ const RoutineDetailPage = () => {
                           <input
                             type="text"
                             placeholder="Tên vật dụng"
-                            value={getTaskDraft(task.id || task.taskId).name}
+                            value={getTaskDraft(taskStateKey).name}
                             onChange={(e) =>
                               setTaskPrepareDrafts((prev) => ({
                                 ...prev,
-                                [task.id || task.taskId]: {
-                                  ...getTaskDraft(task.id || task.taskId),
+                                [taskStateKey]: {
+                                  ...getTaskDraft(taskStateKey),
                                   name: e.target.value,
                                 },
                               }))
@@ -1046,12 +1603,12 @@ const RoutineDetailPage = () => {
                           />
                           <textarea
                             placeholder="Mô tả (optional)"
-                            value={getTaskDraft(task.id || task.taskId).description}
+                            value={getTaskDraft(taskStateKey).description}
                             onChange={(e) =>
                               setTaskPrepareDrafts((prev) => ({
                                 ...prev,
-                                [task.id || task.taskId]: {
-                                  ...getTaskDraft(task.id || task.taskId),
+                                [taskStateKey]: {
+                                  ...getTaskDraft(taskStateKey),
                                   description: e.target.value,
                                 },
                               }))
@@ -1062,12 +1619,12 @@ const RoutineDetailPage = () => {
                           <input
                             type="text"
                             placeholder="Link mua (optional)"
-                            value={getTaskDraft(task.id || task.taskId).purchaseUrl}
+                            value={getTaskDraft(taskStateKey).purchaseUrl}
                             onChange={(e) =>
                               setTaskPrepareDrafts((prev) => ({
                                 ...prev,
-                                [task.id || task.taskId]: {
-                                  ...getTaskDraft(task.id || task.taskId),
+                                [taskStateKey]: {
+                                  ...getTaskDraft(taskStateKey),
                                   purchaseUrl: e.target.value,
                                 },
                               }))
@@ -1076,12 +1633,12 @@ const RoutineDetailPage = () => {
                           />
                           <div className="grid grid-cols-2 gap-2">
                             <select
-                              value={getTaskDraft(task.id || task.taskId).category}
+                              value={getTaskDraft(taskStateKey).category}
                               onChange={(e) =>
                                 setTaskPrepareDrafts((prev) => ({
                                   ...prev,
-                                  [task.id || task.taskId]: {
-                                    ...getTaskDraft(task.id || task.taskId),
+                                  [taskStateKey]: {
+                                    ...getTaskDraft(taskStateKey),
                                     category: e.target.value,
                                   },
                                 }))
@@ -1095,12 +1652,12 @@ const RoutineDetailPage = () => {
                               ))}
                             </select>
                             <select
-                              value={getTaskDraft(task.id || task.taskId).iconName}
+                              value={getTaskDraft(taskStateKey).iconName}
                               onChange={(e) =>
                                 setTaskPrepareDrafts((prev) => ({
                                   ...prev,
-                                  [task.id || task.taskId]: {
-                                    ...getTaskDraft(task.id || task.taskId),
+                                  [taskStateKey]: {
+                                    ...getTaskDraft(taskStateKey),
                                     iconName: e.target.value,
                                   },
                                 }))
@@ -1117,12 +1674,12 @@ const RoutineDetailPage = () => {
                           <label className="inline-flex items-center gap-2 text-sm text-white">
                             <input
                               type="checkbox"
-                              checked={!!getTaskDraft(task.id || task.taskId).isRequired}
+                              checked={!!getTaskDraft(taskStateKey).isRequired}
                               onChange={(e) =>
                                 setTaskPrepareDrafts((prev) => ({
                                   ...prev,
-                                  [task.id || task.taskId]: {
-                                    ...getTaskDraft(task.id || task.taskId),
+                                  [taskStateKey]: {
+                                    ...getTaskDraft(taskStateKey),
                                     isRequired: e.target.checked,
                                   },
                                 }))
@@ -1132,13 +1689,17 @@ const RoutineDetailPage = () => {
                             Bắt buộc
                           </label>
                           <button
-                            onClick={() => handleTaskPrepareAdd(task.id || task.taskId)}
+                            onClick={() => handleTaskPrepareAdd(resolveTaskId(task))}
                             className="w-full bg-white text-black font-bold py-2 rounded-lg active:scale-95 transition-all"
                           >
                             Thêm vật dụng
                           </button>
                         </div>
                       </div>
+                      )}
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -1395,6 +1956,107 @@ const RoutineDetailPage = () => {
           </>
         )}
       </main>
+
+      {previewTask && (() => {
+        const taskId = resolveTaskId(previewTask);
+        const taskLog = getLogByTask(taskId || previewTask?.id || previewTask?.taskId);
+        const normalizedStatus = normalizeTaskStatus(taskLog?.status);
+        const evidenceUrl = resolveEvidenceUrl(taskLog);
+
+        return (
+          <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm p-4 md:p-8">
+            <div className="max-w-3xl mx-auto bg-[#111] border border-white/10 rounded-2xl p-4 md:p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">Task Detail</p>
+                  <h3 className="text-xl font-bold text-white mt-1">
+                    {previewTask?.title || previewTask?.name || 'Task'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setPreviewTask(null)}
+                  className="px-3 py-1.5 rounded-lg border border-white/15 text-sm text-zinc-300 hover:text-white"
+                >
+                  Đóng
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="p-3 rounded-xl bg-neutral-900 border border-white/10">
+                  <p className="text-zinc-500 text-xs">Trạng thái</p>
+                  <span
+                    className={`mt-1 inline-flex text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}
+                  >
+                    {statusLabel(normalizedStatus)}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-neutral-900 border border-white/10">
+                  <p className="text-zinc-500 text-xs">Mục tiêu</p>
+                  <p className="mt-1 text-white font-semibold">
+                    {previewTask?.targetValue ?? '-'} {previewTask?.unitName || ''}
+                  </p>
+                </div>
+              </div>
+
+              {previewTask?.description && (
+                <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10">
+                  <p className="text-zinc-500 text-xs">Mô tả</p>
+                  <p className="mt-1 text-sm text-zinc-200 whitespace-pre-wrap">{previewTask.description}</p>
+                </div>
+              )}
+
+              {typeof taskLog?.currentValue !== 'undefined' && (
+                <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10">
+                  <p className="text-zinc-500 text-xs">Giá trị hiện tại</p>
+                  <p className="mt-1 text-sm text-zinc-200">{taskLog.currentValue}</p>
+                </div>
+              )}
+
+              {evidenceUrl && (
+                <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10 space-y-2">
+                  <p className="text-zinc-500 text-xs">Minh chứng</p>
+                  {isLikelyImageEvidence(evidenceUrl) ? (
+                    <img
+                      src={evidenceUrl}
+                      alt="Task evidence"
+                      className="w-full max-h-[360px] object-contain rounded-lg border border-white/10 bg-black"
+                    />
+                  ) : (
+                    <a
+                      href={evidenceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-lime-400 hover:underline break-all"
+                    >
+                      {evidenceUrl}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-3 p-3 rounded-xl bg-neutral-900 border border-white/10">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-zinc-500 text-xs">Prepare items</p>
+                  <span className="text-zinc-500 text-xs">{previewTask?.prepareItems?.length || 0} item(s)</span>
+                </div>
+                {previewTask?.prepareItems?.length ? (
+                  <div className="mt-2 space-y-2">
+                    {previewTask.prepareItems.map((item) => (
+                      <div key={item.id} className="p-2 rounded-lg bg-black/30 border border-white/5">
+                        <p className="text-sm text-white font-semibold">{item.name}</p>
+                        <p className="text-xs text-zinc-500">{item.category}</p>
+                        {item.description && <p className="text-xs text-zinc-400 mt-1">{item.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-zinc-600">Chưa có vật dụng.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <BottomNav activeItem="target" />
     </div>
