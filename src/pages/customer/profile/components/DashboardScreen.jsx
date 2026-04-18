@@ -28,28 +28,28 @@ export default function DashboardScreen({
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          title="Routines"
+          title="Thói quen"
           value={analyticsStats.totalRoutines}
           icon={<Target className="text-blue-400" size={24} />}
-          sub="Active"
+          sub="Đang chạy"
         />
         <StatCard
-          title="Streak"
+          title="Chuỗi"
           value={analyticsStats.currentStreak}
           icon={<Flame className="text-orange-500" size={24} />}
-          sub="Days"
+          sub="Ngày"
         />
         <StatCard
-          title="Completion"
+          title="Hoàn thành"
           value={`${analyticsStats.completionPercent}%`}
           icon={<Activity className="text-lime-400" size={24} />}
-          sub="Rate"
+          sub="Tỷ lệ"
         />
         <StatCard
-          title="Best Streak"
+          title="Chuỗi tốt nhất"
           value={analyticsStats.longestStreak}
           icon={<Trophy className="text-yellow-400" size={24} />}
-          sub="Record"
+          sub="Kỷ lục"
         />
       </div>
 
@@ -71,7 +71,7 @@ export default function DashboardScreen({
           to="/customer/subscriptions"
           className="px-4 py-2 bg-lime-400 text-black text-xs font-bold rounded-lg hover:bg-lime-500 transition-all"
         >
-          {isPremiumActive ? 'MANAGE PLAN' : 'UPGRADE PRO'}
+          {isPremiumActive ? 'QUẢN LÝ GÓI' : 'NÂNG CẤP CAO CẤP'}
         </Link>
       </div>
 
@@ -79,9 +79,9 @@ export default function DashboardScreen({
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-bold flex items-center gap-2">
             <Activity size={20} className="text-lime-400" />
-            Activity Log
+            Nhật ký hoạt động
           </h3>
-          <span className="text-xs text-neutral-500">Last 12 months</span>
+          <span className="text-xs text-neutral-500">12 tháng gần nhất</span>
         </div>
         <Heatmap data={heatmapData} />
       </div>

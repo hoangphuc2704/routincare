@@ -18,7 +18,7 @@ export default function useUsers() {
       const data = response.data?.data || response.data;
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to fetch users';
+      const errorMsg = err.response?.data?.message || 'Không thể tải danh sách người dùng';
       setError(errorMsg);
       message.error(errorMsg);
     } finally {
@@ -31,12 +31,12 @@ export default function useUsers() {
     try {
       setLoading(true);
       const response = await adminApi.createUser(userData);
-      message.success('User created successfully');
+      message.success('Tạo người dùng thành công');
       setIsFormOpen(false);
       await fetchUsers(); // Refresh list
       return response.data;
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to create user';
+      const errorMsg = err.response?.data?.message || 'Không thể tạo người dùng';
       message.error(errorMsg);
       throw err;
     } finally {
@@ -49,13 +49,13 @@ export default function useUsers() {
     try {
       setLoading(true);
       const response = await adminApi.updateUser(id, userData);
-      message.success('User updated successfully');
+      message.success('Cập nhật người dùng thành công');
       setIsFormOpen(false);
       setSelectedUser(null);
       await fetchUsers(); // Refresh list
       return response.data;
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to update user';
+      const errorMsg = err.response?.data?.message || 'Không thể cập nhật người dùng';
       message.error(errorMsg);
       throw err;
     } finally {
@@ -68,10 +68,10 @@ export default function useUsers() {
     try {
       setLoading(true);
       await adminApi.deleteUser(id);
-      message.success('User deleted successfully');
+      message.success('Xóa người dùng thành công');
       await fetchUsers(); // Refresh list
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to delete user';
+      const errorMsg = err.response?.data?.message || 'Không thể xóa người dùng';
       message.error(errorMsg);
       throw err;
     } finally {

@@ -21,7 +21,7 @@ export default function RoutinesScreen({ routinesLoading, routines, isMe }) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-              {isMe ? 'Your Routines' : 'Public Routines'}
+              {isMe ? 'Thói quen của bạn' : 'Thói quen công khai'}
             </h3>
             <span className="text-xs text-neutral-500">{routines.length} mục</span>
           </div>
@@ -44,7 +44,7 @@ export default function RoutinesScreen({ routinesLoading, routines, isMe }) {
                 <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
                   <h3 className="text-xs font-semibold text-white truncate">{routine.title}</h3>
                   <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-300">
-                    <span>{routine.taskCount} task</span>
+                    <span>{routine.taskCount} nhiệm vụ</span>
                     <span className="truncate ml-2">
                       {repeatLabel(routine.repeatType, routine.repeatDays)}
                     </span>

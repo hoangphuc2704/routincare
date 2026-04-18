@@ -19,7 +19,7 @@ const RevenueLineChart = ({ data = [], loading = false }) => {
     if (!safeData || safeData.length === 0) {
       console.log('⚠️ RevenueLineChart: No data provided');
       setChartState({
-        series: [{ name: 'Revenue', data: [] }],
+        series: [{ name: 'Doanh thu', data: [] }],
         options: getLineChartOptions([]),
       });
       return;
@@ -34,7 +34,7 @@ const RevenueLineChart = ({ data = [], loading = false }) => {
     setChartState({
       series: [
         {
-          name: 'Revenue (VND)',
+          name: 'Doanh thu (VND)',
           data: revenues,
         },
       ],
@@ -167,7 +167,7 @@ const RevenueLineChart = ({ data = [], loading = false }) => {
   return (
     <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-blue-900/20">
       <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-        <span>�</span> Revenue Trend
+        <span>📈</span> Xu hướng doanh thu
       </h3>
       {chartState.series &&
       chartState.series[0] &&
@@ -178,7 +178,7 @@ const RevenueLineChart = ({ data = [], loading = false }) => {
         </div>
       ) : (
         <div className="flex items-center justify-center h-80 text-gray-400">
-          <p>No data available</p>
+          <p>Không có dữ liệu</p>
         </div>
       )}
     </div>

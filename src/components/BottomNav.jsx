@@ -153,7 +153,7 @@ export default function BottomNav({ activeItem }) {
 
       clearAllAuth();
       setMoreMenuOpen(false);
-      message.success('Da dang xuat');
+      message.success('Đã đăng xuất');
       navigate('/', { replace: true });
     } finally {
       setLogoutLoading(false);
@@ -166,11 +166,11 @@ export default function BottomNav({ activeItem }) {
       : 'p-1 text-white hover:text-[#d2fb05] transition-colors';
 
   const desktopItems = [
-    { key: 'home', to: '/home', label: 'Home', icon: HomeIcon },
-    { key: 'search', to: '/customer/users/search', label: 'Search', icon: SearchIcon },
-    { key: 'target', to: '/customer/selfroutin', label: 'Plan', icon: TargetIcon },
-    { key: 'message', to: '/customer/message', label: 'Chat', icon: MessageCircleIcon },
-    { key: 'friends', to: '/customer/friend/list', label: 'Friends', icon: UsersIcon },
+    { key: 'home', to: '/home', label: 'Trang chủ', icon: HomeIcon },
+    { key: 'search', to: '/customer/users/search', label: 'Tìm kiếm', icon: SearchIcon },
+    { key: 'target', to: '/customer/selfroutin', label: 'Kế hoạch', icon: TargetIcon },
+    { key: 'message', to: '/customer/message', label: 'Tin nhắn', icon: MessageCircleIcon },
+    { key: 'friends', to: '/customer/friend/list', label: 'Bạn bè', icon: UsersIcon },
   ];
 
   return (
@@ -218,7 +218,7 @@ export default function BottomNav({ activeItem }) {
                   avatar ||
                   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop'
                 }
-                alt="Profile"
+                alt="Hồ sơ"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
@@ -273,7 +273,7 @@ export default function BottomNav({ activeItem }) {
             >
               <MoreIcon className="w-7 h-7 shrink-0" filled={moreMenuOpen} />
               <span className="text-sm font-medium whitespace-nowrap overflow-hidden max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 transition-all duration-150">
-                Xem them
+                Xem thêm
               </span>
             </button>
 
@@ -285,7 +285,7 @@ export default function BottomNav({ activeItem }) {
                   disabled={logoutLoading}
                   className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white whitespace-nowrap hover:bg-white/5 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                 >
-                  {logoutLoading ? 'Dang xuat...' : 'Dang xuat'}
+                  {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}
                 </button>
               </div>
             )}
@@ -305,12 +305,12 @@ export default function BottomNav({ activeItem }) {
                   avatar ||
                   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop'
                 }
-                alt="Profile"
+                alt="Hồ sơ"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
             <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 transition-all duration-150">
-              Profile
+              Hồ sơ
             </span>
           </Link>
         </div>

@@ -147,7 +147,7 @@ const RevenueDashboard = () => {
       console.log('✅ State updated successfully');
     } catch (err) {
       console.error('❌ Error fetching dashboard data:', err);
-      setError(err.response?.data?.message || 'Failed to load revenue data. Please try again.');
+      setError(err.response?.data?.message || 'Không thể tải dữ liệu doanh thu. Vui lòng thử lại.');
       setLoadingStates({
         summary: false,
         monthly: false,
@@ -217,10 +217,10 @@ const RevenueDashboard = () => {
       <div className="mb-8 animate-fade-in">
         <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
           <span className="text-4xl">💹</span>
-          Revenue Dashboard
+          Bảng điều khiển doanh thu
         </h1>
         <p className="text-gray-400 text-sm sm:text-base">
-          Track your platform's financial performance in real-time
+          Theo dõi hiệu quả tài chính của nền tảng theo thời gian thực
         </p>
       </div>
 
@@ -231,7 +231,7 @@ const RevenueDashboard = () => {
             <div className="flex items-start gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
-                <h3 className="text-red-400 font-semibold">Error Loading Data</h3>
+                <h3 className="text-red-400 font-semibold">Lỗi tải dữ liệu</h3>
                 <p className="text-red-300 text-sm mt-1">{error}</p>
               </div>
             </div>
@@ -239,7 +239,7 @@ const RevenueDashboard = () => {
               onClick={handleRetry}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
             >
-              Retry
+              Thử lại
             </button>
           </div>
         </div>
@@ -279,16 +279,16 @@ const RevenueDashboard = () => {
       {!loading && (
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700/50 text-center text-gray-400 text-sm">
           <p>
-            📊 Showing data for:{' '}
+            📊 Đang hiển thị dữ liệu cho:{' '}
             <span className="text-blue-400 font-semibold">
               {dateRange === '7days'
-                ? 'Last 7 Days'
+                ? '7 ngày gần đây'
                 : dateRange === '30days'
-                  ? 'Last 30 Days'
-                  : '1 Year'}
+                  ? '30 ngày gần đây'
+                  : '1 năm'}
             </span>
           </p>
-          <p className="mt-2 text-xs text-gray-500">Last updated: {new Date().toLocaleString()}</p>
+          <p className="mt-2 text-xs text-gray-500">Cập nhật lúc: {new Date().toLocaleString()}</p>
         </div>
       )}
 

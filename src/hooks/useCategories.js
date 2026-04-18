@@ -19,7 +19,7 @@ export default function useCategories() {
       const data = response.data?.data || response.data;
       setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to fetch categories';
+      const errorMsg = err.response?.data?.message || 'Không thể tải danh sách danh mục';
       setError(errorMsg);
       message.error(errorMsg);
     } finally {
@@ -32,12 +32,12 @@ export default function useCategories() {
     try {
       setLoading(true);
       const response = await adminApi.createCategory(categoryData);
-      message.success('Category created successfully');
+      message.success('Tạo danh mục thành công');
       setIsFormOpen(false);
       await fetchCategories(); // Refresh list
       return response.data;
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to create category';
+      const errorMsg = err.response?.data?.message || 'Không thể tạo danh mục';
       message.error(errorMsg);
       throw err;
     } finally {
@@ -50,13 +50,13 @@ export default function useCategories() {
     try {
       setLoading(true);
       const response = await adminApi.updateCategory(id, categoryData);
-      message.success('Category updated successfully');
+      message.success('Cập nhật danh mục thành công');
       setIsFormOpen(false);
       setSelectedCategory(null);
       await fetchCategories(); // Refresh list
       return response.data;
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to update category';
+      const errorMsg = err.response?.data?.message || 'Không thể cập nhật danh mục';
       message.error(errorMsg);
       throw err;
     } finally {
@@ -69,10 +69,10 @@ export default function useCategories() {
     try {
       setLoading(true);
       await adminApi.deleteCategory(id);
-      message.success('Category deleted successfully');
+      message.success('Xóa danh mục thành công');
       await fetchCategories(); // Refresh list
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to delete category';
+      const errorMsg = err.response?.data?.message || 'Không thể xóa danh mục';
       message.error(errorMsg);
       throw err;
     } finally {

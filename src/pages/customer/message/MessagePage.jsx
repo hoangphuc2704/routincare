@@ -44,8 +44,8 @@ export default function MessagePage() {
               <ChevronLeft size={26} />
             </button>
             <div className="flex-1">
-              <p className="text-xs uppercase tracking-[0.18em] text-lime-300/80">Direct chat</p>
-              <h1 className="text-3xl font-semibold mt-1 leading-tight">Messages</h1>
+              <p className="text-xs uppercase tracking-[0.18em] text-lime-300/80">Trò chuyện trực tiếp</p>
+              <h1 className="text-3xl font-semibold mt-1 leading-tight">Tin nhắn</h1>
               <p className="text-sm text-zinc-400 mt-1">
                 Nói chuyện với bạn bè và huấn luyện viên.
               </p>
@@ -55,7 +55,7 @@ export default function MessagePage() {
               className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-lime-400 text-black font-semibold shadow-lg active:scale-95 transition-all"
             >
               <Plus size={18} />
-              New
+              Mới
             </button>
           </div>
         </div>
@@ -137,16 +137,16 @@ export default function MessagePage() {
               <div className="mx-auto mb-4 w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/30 flex items-center justify-center">
                 <MessageSquare className="text-lime-300" size={24} />
               </div>
-              <p className="text-lg font-semibold">Chua co tin nhan</p>
+              <p className="text-lg font-semibold">Chưa có tin nhắn</p>
               <p className="text-sm text-zinc-500 mt-1">
-                Bat dau ket ban va tao cuoc tro chuyen moi.
+                Bắt đầu kết bạn và tạo cuộc trò chuyện mới.
               </p>
               <button
                 onClick={() => navigate('/customer/users/search')}
                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lime-400 text-black font-semibold shadow-lg active:scale-95 transition-all"
               >
                 <Plus size={16} />
-                Tim ban be
+                Tìm bạn bè
               </button>
             </div>
           )}

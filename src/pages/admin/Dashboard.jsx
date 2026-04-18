@@ -54,18 +54,18 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Welcome to Admin Dashboard</h1>
+        <h1 className="text-4xl font-bold text-white mb-2">Chào mừng đến trang quản trị</h1>
         <p className="text-gray-400 text-lg">
-          Manage your application settings, users, and content
+          Quản lý cài đặt hệ thống, người dùng và nội dung
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title="Total Users" value={stats.totalUsers} icon="👥" color="text-blue-400" />
-        <StatCard title="Active Users" value={stats.activeUsers} icon="✅" color="text-green-400" />
+        <StatCard title="Tổng người dùng" value={stats.totalUsers} icon="👥" color="text-blue-400" />
+        <StatCard title="Người dùng hoạt động" value={stats.activeUsers} icon="✅" color="text-green-400" />
         <StatCard
-          title="Total Categories"
+          title="Tổng danh mục"
           value={stats.totalCategories}
           icon="📁"
           color="text-purple-400"
@@ -74,20 +74,20 @@ export default function Dashboard() {
 
       {/* Quick Actions Section */}
       <div>
-        <h2 className="text-2xl font-bold text-white mb-4">Quick Actions</h2>
+        <h2 className="text-2xl font-bold text-white mb-4">Thao tác nhanh</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <QuickActionButton
-            label="Manage Users"
+            label="Quản lý người dùng"
             icon="👤"
             onClick={() => navigate('/admin/users')}
           />
           <QuickActionButton
-            label="Manage Categories"
+            label="Quản lý danh mục"
             icon="📂"
             onClick={() => navigate('/admin/categories')}
           />
           <QuickActionButton
-            label="Revenue Analytics"
+            label="Phân tích doanh thu"
             icon="💹"
             onClick={() => navigate('/admin/revenue')}
           />
@@ -96,18 +96,18 @@ export default function Dashboard() {
 
       {/* Recent Activity Section */}
       <div className="bg-neutral-900 border border-white/10 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-white mb-4">System Overview</h2>
+        <h2 className="text-xl font-bold text-white mb-4">Tổng quan hệ thống</h2>
         <div className="space-y-3 text-gray-300">
           <div className="flex justify-between items-center py-2 border-b border-white/5">
-            <span>Total Users Created</span>
+            <span>Tổng người dùng đã tạo</span>
             <span className="font-semibold text-white">{stats.totalUsers}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-white/5">
-            <span>Categories Available</span>
+            <span>Danh mục hiện có</span>
             <span className="font-semibold text-white">{stats.totalCategories}</span>
           </div>
           <div className="flex justify-between items-center py-2">
-            <span>Active Users</span>
+            <span>Người dùng hoạt động</span>
             <span className="font-semibold text-green-400">{stats.activeUsers}</span>
           </div>
         </div>
@@ -116,8 +116,8 @@ export default function Dashboard() {
       {/* Info Box */}
       <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
         <p className="text-blue-200 text-sm">
-          💡 <strong>Pro Tip:</strong> Use the sidebar navigation to access Users, Categories, and
-          other admin features. All changes are logged and saved automatically.
+          💡 <strong>Mẹo:</strong> Dùng thanh điều hướng bên trái để truy cập Người dùng, Danh mục
+          và các tính năng quản trị khác. Mọi thay đổi đều được ghi nhận và lưu tự động.
         </p>
       </div>
     </div>

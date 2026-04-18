@@ -3,7 +3,7 @@ import { BookmarkIcon } from './Icons';
 
 export default function FeedPost({ post, onCopyRoutine, copyLoading }) {
   const user = post?.user || {};
-  const displayName = user.name || user.fullName || 'Routin User';
+  const displayName = user.name || user.fullName || 'Người dùng Routin';
   const displayImage = post?.image || post?.imageUrl || post?.thumbnailUrl || null;
   const canCopyRoutine = Boolean(post?.routineId);
 
@@ -13,7 +13,7 @@ export default function FeedPost({ post, onCopyRoutine, copyLoading }) {
         {displayImage ? (
           <img
             src={displayImage}
-            alt={post.caption || 'Post image'}
+            alt={post.caption || 'Ảnh bài đăng'}
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
@@ -49,7 +49,7 @@ export default function FeedPost({ post, onCopyRoutine, copyLoading }) {
             {post.caption}
           </p>
         ) : (
-          <p className="text-sm text-white/70">Chia se hoat dong hom nay</p>
+          <p className="text-sm text-white/70">Chia sẻ hoạt động hôm nay</p>
         )}
 
         <div className="mt-3 flex items-center justify-between gap-3">
@@ -59,7 +59,7 @@ export default function FeedPost({ post, onCopyRoutine, copyLoading }) {
             disabled={!canCopyRoutine || copyLoading}
             className="inline-flex items-center rounded-full border border-[#d2fb05]/40 px-3 py-1.5 text-xs font-semibold text-[#d2fb05] hover:bg-[#d2fb05]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {copyLoading ? 'Dang copy...' : 'Copy routine'}
+            {copyLoading ? 'Đang sao chép...' : 'Sao chép thói quen'}
           </button>
 
           {post.timeago && <p className="text-xs text-white/55">{post.timeago}</p>}

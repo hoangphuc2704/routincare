@@ -20,7 +20,7 @@ export default function ChatDetail() {
   const { id: conversationId } = useParams();
   const navigate = useNavigate();
   const { state } = useLocation();
-  const conversation = state?.conversation || { title: 'User' };
+  const conversation = state?.conversation || { title: 'Người dùng' };
   const stateOtherUser = state?.user || state?.partner || {};
 
   const {
@@ -149,7 +149,7 @@ export default function ChatDetail() {
                 {displayUser?.avatarUrl ? (
                   <img
                     src={displayUser?.avatarUrl}
-                    alt={displayUser?.fullName || 'User'}
+                    alt={displayUser?.fullName || 'Người dùng'}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.target.style.display = 'none';
@@ -171,13 +171,13 @@ export default function ChatDetail() {
                     <>
                       {displayUser?.fullName ||
                         conversation.title ||
-                        'Nguoi dung'}
+                        'Người dùng'}
                       <ShieldCheck size={14} className="text-lime-300" />
                     </>
                   )}
                 </h3>
                 <span className="text-[11px] text-lime-300/80 flex items-center gap-1">
-                  <Dot size={16} className="-ml-1" /> Active now
+                  <Dot size={16} className="-ml-1" /> Đang hoạt động
                 </span>
               </div>
             </div>
@@ -237,8 +237,8 @@ export default function ChatDetail() {
           })
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-zinc-500 text-sm bg-white/5 border border-white/10 rounded-2xl">
-            <p className="font-semibold text-white">Chua co tin nhan</p>
-            <p className="text-xs text-zinc-400 mt-1">Hay gui tin nhan dau tien.</p>
+            <p className="font-semibold text-white">Chưa có tin nhắn</p>
+            <p className="text-xs text-zinc-400 mt-1">Hãy gửi tin nhắn đầu tiên.</p>
           </div>
         )}
       </main>
@@ -258,7 +258,7 @@ export default function ChatDetail() {
           <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="Type a message..."
+              placeholder="Nhập tin nhắn..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               className="w-full bg-black/40 border border-white/10 rounded-full py-3 px-5 text-sm outline-none focus:ring-1 focus:ring-lime-400 transition-all placeholder:text-zinc-600"

@@ -258,18 +258,18 @@ export function normalizePostItem(item, index, options = {}) {
 export function normalizeExploreRoutine(item, index) {
   return {
     id: item?.id || item?.routineId || `routine-${index}`,
-    title: item?.title || item?.name || 'Routine công khai',
+    title: item?.title || item?.name || 'Thói quen công khai',
     description: item?.description || '',
     image: item?.coverImageUrl || item?.thumbnailUrl || item?.imageUrl || null,
     copies: item?.copiesCount ?? item?.copyCount ?? 0,
-    category: item?.categoryName || item?.category?.name || 'General',
+    category: item?.categoryName || item?.category?.name || 'Tổng hợp',
   };
 }
 
 export function normalizeExploreUser(item, index) {
   return {
     id: item?.id || item?.userId || `user-${index}`,
-    name: item?.fullName || item?.name || item?.userName || 'Routin User',
+    name: item?.fullName || item?.name || item?.userName || 'Người dùng Routin',
     avatar: item?.avatarUrl || item?.avatar || null,
     bio: item?.bio || '',
     followers: item?.followersCount ?? item?.followerCount ?? 0,
@@ -284,7 +284,7 @@ export function normalizeCommentItem(item, index) {
     likesCount: item?.likesCount ?? item?.likeCount ?? item?.likes ?? 0,
     createdAt: item?.createdAt || item?.updatedAt || null,
     timeago: toRelativeTime(item?.createdAt || item?.updatedAt),
-    authorName: user?.fullName || user?.name || user?.userName || item?.authorName || 'User',
+    authorName: user?.fullName || user?.name || user?.userName || item?.authorName || 'Người dùng',
   };
 }
 
@@ -321,7 +321,7 @@ export function normalizeRoutinePreview(response, post) {
   const tasks = Array.isArray(tasksRaw)
     ? tasksRaw.map((task, index) => ({
         id: task?.id || task?.taskId || `task-${index}`,
-        title: task?.title || task?.name || task?.taskName || `Task ${index + 1}`,
+        title: task?.title || task?.name || task?.taskName || `Nhiệm vụ ${index + 1}`,
         note: task?.description || task?.note || '',
         tips: task?.tips || '',
         type: task?.type || task?.taskType || task?.unitType || null,
@@ -346,13 +346,13 @@ export function normalizeRoutinePreview(response, post) {
   const prepareItems = Array.isArray(prepareRaw)
     ? prepareRaw.map((item, index) => ({
         id: item?.id || item?.prepareItemId || `prepare-${index}`,
-        title: item?.title || item?.name || item?.itemName || `Prepare ${index + 1}`,
+        title: item?.title || item?.name || item?.itemName || `Vật dụng ${index + 1}`,
       }))
     : [];
 
   return {
     id: routine?.id || routine?.routineId || post?.routineId,
-    title: routine?.title || routine?.name || post?.caption || 'Routine',
+    title: routine?.title || routine?.name || post?.caption || 'Thói quen',
     description: routine?.description || post?.caption || '',
     image:
       routine?.coverImageUrl ||

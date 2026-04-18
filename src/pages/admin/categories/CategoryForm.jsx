@@ -27,7 +27,7 @@ export default function CategoryForm({ onClose, category }) {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) {
-      newErrors.name = 'Category name is required';
+      newErrors.name = 'Tên danh mục là bắt buộc';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -68,7 +68,7 @@ export default function CategoryForm({ onClose, category }) {
 
   return (
     <Modal
-      title={category ? 'Edit Category' : 'Add New Category'}
+      title={category ? 'Sửa danh mục' : 'Thêm danh mục mới'}
       open={true}
       onCancel={onClose}
       footer={null}
@@ -79,13 +79,13 @@ export default function CategoryForm({ onClose, category }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Field */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Category Name *</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Tên danh mục *</label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
-            placeholder="Enter category name"
+            placeholder="Nhập tên danh mục"
             className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 ${
               errors.name ? 'border-red-500' : 'border-gray-300'
             }`}
@@ -95,12 +95,12 @@ export default function CategoryForm({ onClose, category }) {
 
         {/* Description Field */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả</label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleChange}
-            placeholder="Enter category description (optional)"
+            placeholder="Nhập mô tả danh mục (không bắt buộc)"
             rows="4"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 resize-none"
           />
@@ -113,14 +113,14 @@ export default function CategoryForm({ onClose, category }) {
             onClick={onClose}
             className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors duration-200 font-medium"
           >
-            Cancel
+            Hủy
           </button>
           <button
             type="submit"
             disabled={loading}
             className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors duration-200 font-medium"
           >
-            {loading ? 'Processing...' : category ? 'Update Category' : 'Create Category'}
+            {loading ? 'Đang xử lý...' : category ? 'Cập nhật danh mục' : 'Tạo danh mục'}
           </button>
         </div>
       </form>

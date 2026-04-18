@@ -37,7 +37,7 @@ const sortFeedByLatest = (items) =>
 
 const normalizeExploreRoutine = (item) => ({
   id: item?.id || item?.routineId || item?.postId,
-  title: item?.title || item?.routineTitle || item?.name || 'Routine công khai',
+  title: item?.title || item?.routineTitle || item?.name || 'Thói quen công khai',
   description: item?.description || item?.caption || '',
   image: item?.coverImageUrl || item?.thumbnailUrl || item?.imageUrl || item?.image || '',
   copies: item?.copyCount ?? item?.totalCopies ?? item?.usedCount ?? 0,
@@ -46,12 +46,12 @@ const normalizeExploreRoutine = (item) => ({
     item?.categoryName ||
     item?.category ||
     item?.topic ||
-    'Featured',
+    'Nổi bật',
 });
 
 const normalizeExploreUser = (item) => ({
   id: item?.id || item?.userId,
-  name: item?.fullName || item?.name || item?.username || 'Routin User',
+  name: item?.fullName || item?.name || item?.username || 'Người dùng Routin',
   avatar: item?.avatarUrl || item?.avatar || item?.profilePicture || '',
   bio: item?.bio || '',
   followers: item?.followersCount ?? item?.totalFollowers ?? item?.followerCount ?? 0,

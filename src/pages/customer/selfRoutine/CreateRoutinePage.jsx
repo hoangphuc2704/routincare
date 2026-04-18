@@ -75,7 +75,7 @@ export default function CreateRoutinePage() {
             }
 
             if (!finalCategoryId) {
-                message.warning('Vui long chon category truoc khi tao routine');
+                message.warning('Vui lòng chọn category trước khi tạo routine');
                 setLoading(false);
                 return;
             }

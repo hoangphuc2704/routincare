@@ -84,7 +84,7 @@ const TopPlansDonutChart = ({ data = [], loading = false }) => {
             },
             total: {
               show: true,
-              label: 'Total Revenue',
+              label: 'Tổng doanh thu',
               fontSize: '14px',
               fontFamily: 'Helvetica, Arial, sans-serif',
               color: '#d1d5db',
@@ -175,7 +175,7 @@ const TopPlansDonutChart = ({ data = [], loading = false }) => {
   return (
     <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-purple-900/20">
       <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-        <span>🎯</span> Top Plans Distribution
+        <span>🎯</span> Phân bổ gói nổi bật
       </h3>
       {chartState.series && chartState.series.length > 0 ? (
         <div className="overflow-x-auto">
@@ -188,7 +188,7 @@ const TopPlansDonutChart = ({ data = [], loading = false }) => {
         </div>
       ) : (
         <div className="flex items-center justify-center h-80 text-gray-400">
-          <p>No data available</p>
+          <p>Không có dữ liệu</p>
         </div>
       )}
     </div>

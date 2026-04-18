@@ -38,7 +38,7 @@ export default function SettingsScreen({
             className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
             required
           />
-          <p className="text-[11px] text-neutral-500">Field bắt buộc cho PATCH /api/Users/me</p>
+          <p className="text-[11px] text-neutral-500">Trường bắt buộc cho API PATCH /api/Users/me</p>
         </label>
 
         <label className="space-y-2 text-sm">
@@ -64,7 +64,7 @@ export default function SettingsScreen({
         </label>
 
         <label className="space-y-2 text-sm">
-          <span className="text-neutral-300">Avatar URL</span>
+          <span className="text-neutral-300">URL ảnh đại diện</span>
           <input
             type="text"
             name="avatarUrl"
@@ -73,7 +73,7 @@ export default function SettingsScreen({
             className="w-full rounded-xl bg-neutral-800 px-3 py-3 text-white outline-none focus:ring-2 focus:ring-lime-400"
             placeholder="https://..."
           />
-          <p className="text-[11px] text-neutral-500">Optional, chấp nhận http/https</p>
+          <p className="text-[11px] text-neutral-500">Không bắt buộc, chấp nhận http/https</p>
         </label>
 
         <div className="space-y-2 text-sm">
@@ -90,7 +90,7 @@ export default function SettingsScreen({
               {profile.avatarUrl ? (
                 <img
                   src={profile.avatarUrl}
-                  alt="avatar-preview"
+                  alt="xem-trước-avatar"
                   className="h-12 w-12 rounded-full object-cover border border-white/10"
                 />
               ) : (
@@ -99,14 +99,14 @@ export default function SettingsScreen({
               <p className="text-[11px] text-neutral-500">
                 {uploadingAvatar
                   ? 'Đang tải ảnh lên...'
-                  : 'Chọn ảnh để tự động upload và điền Avatar URL'}
+                  : 'Chọn ảnh để tự động tải lên và điền URL ảnh đại diện'}
               </p>
             </div>
           </div>
         </div>
 
         <label className="space-y-2 text-sm">
-          <span className="text-neutral-300">Bio</span>
+          <span className="text-neutral-300">Giới thiệu</span>
           <textarea
             name="bio"
             value={profile.bio}
@@ -196,7 +196,7 @@ export default function SettingsScreen({
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 disabled:opacity-70"
           >
             <LogOut size={16} />
-            {logoutLoading ? 'Đang đăng xuất...' : 'Logout'}
+            {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}
           </button>
         </div>
       </div>

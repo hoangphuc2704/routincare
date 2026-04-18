@@ -72,7 +72,7 @@ export default function RoutinePreviewModal({
         }}
       >
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-          <p className="text-base font-bold text-white">Xem trước routine</p>
+           <p className="text-base font-bold text-white">Xem trước thói quen</p>
           <button
             type="button"
             onClick={onCancel}
@@ -88,7 +88,7 @@ export default function RoutinePreviewModal({
       {loading ? (
         <div className="py-8 text-center">
           <Spin />
-          <p className="mt-3 text-sm text-white/65">Đang tải chi tiết routine...</p>
+          <p className="mt-3 text-sm text-white/65">Đang tải chi tiết thói quen...</p>
         </div>
       ) : routine ? (
         <div className="space-y-4">
@@ -103,13 +103,13 @@ export default function RoutinePreviewModal({
             {routine.description ? (
               <p className="text-sm text-white/75 mt-1">{routine.description}</p>
             ) : (
-              <p className="text-sm text-white/50 mt-1">Routine chưa có mô tả.</p>
+              <p className="text-sm text-white/50 mt-1">Thói quen chưa có mô tả.</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
             <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-              <p className="text-white/60">Số task</p>
+              <p className="text-white/60">Số nhiệm vụ</p>
               <p className="text-sm font-semibold text-white">{routine.taskCount}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
@@ -144,7 +144,7 @@ export default function RoutinePreviewModal({
 
           {routine.tasks.length > 0 && (
             <div>
-              <p className="text-sm font-semibold text-[#d2fb05]">Danh sách task</p>
+              <p className="text-sm font-semibold text-[#d2fb05]">Danh sách nhiệm vụ</p>
               <div className="mt-2 space-y-2">
                 {routine.tasks.map((task) => (
                   <div key={task.id} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 space-y-2">
@@ -177,7 +177,7 @@ export default function RoutinePreviewModal({
 
                     {task.prepareItems.length > 0 && (
                       <div className="rounded-lg border border-white/10 bg-black/25 p-2">
-                        <p className="text-xs font-semibold text-white/80 mb-1">Vật dụng cho task</p>
+                        <p className="text-xs font-semibold text-white/80 mb-1">Vật dụng cho nhiệm vụ</p>
                         <div className="space-y-1.5">
                           {task.prepareItems.map((item) => (
                             <div key={item.id} className="text-xs text-white/70">
@@ -222,7 +222,7 @@ export default function RoutinePreviewModal({
 
         </div>
       ) : (
-        <p className="text-sm text-white/60">Không có dữ liệu chi tiết routine.</p>
+        <p className="text-sm text-white/60">Không có dữ liệu chi tiết thói quen.</p>
       )}
         </div>
 
@@ -242,7 +242,7 @@ export default function RoutinePreviewModal({
             disabled={!canCopy || submitting}
             className="rounded-lg border border-[#d2fb05] bg-[#d2fb05] px-4 py-2 text-sm font-semibold text-black hover:border-[#e1ff56] hover:bg-[#e1ff56] disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Đang copy...' : 'Xác nhận copy'}
+            {submitting ? 'Đang sao chép...' : 'Xác nhận sao chép'}
           </button>
         </div>
       </div>

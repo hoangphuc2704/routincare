@@ -166,14 +166,14 @@ function Profile() {
   const subscriptionPlanName =
     currentSubscription?.planName ||
     currentSubscription?.name ||
-    (subscriptionStatus === 'Active' ? 'Premium Plan' : 'Free Plan');
+    (subscriptionStatus === 'Active' ? 'Gói Premium' : 'Gói Miễn phí');
   const subscriptionEndDate = currentSubscription?.endDate || currentSubscription?.expiresAt;
   const isPremiumActive = subscriptionStatus === 'Active';
-  let subscriptionDescription = 'Your current subscription';
+  let subscriptionDescription = 'Gói đăng ký hiện tại của bạn';
   if (isPremiumActive) {
     subscriptionDescription = `Hiệu lực đến ${formatSubscriptionDate(subscriptionEndDate)}`;
   } else if (subscriptionStatus === 'Pending') {
-    subscriptionDescription = 'Subscription đang chờ kích hoạt';
+    subscriptionDescription = 'Gói đăng ký đang chờ kích hoạt';
   }
 
   const analyticsStats = {
@@ -266,7 +266,7 @@ function Profile() {
       return;
     }
     if (!isValidUrl(profile.avatarUrl?.trim())) {
-      message.warning('Avatar URL không hợp lệ');
+      message.warning('URL ảnh đại diện không hợp lệ');
       return;
     }
     try {
@@ -359,14 +359,18 @@ function Profile() {
 
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-black text-white uppercase tracking-tighter">
-              {isMe ? 'My Space' : 'Member Profile'}
+              {isMe ? 'Không gian của tôi' : 'Hồ sơ thành viên'}
             </h1>
             <p className="text-sm text-neutral-500 font-medium">
-              {isMe ? 'Manage your habits and stats.' : "Viewing user's routine and journey."}
+              {isMe ? 'Quản lý thói quen và thống kê của bạn.' : 'Đang xem routine và hành trình của thành viên.'}
             </p>
           </div>
 
-          <UserHeader user={profile} isMe={isMe} />
+          <UserHeader
+            user={profile}
+            isMe={isMe}
+            onEditProfile={() => setActiveTab('settings')}
+          />
 
           <div className="flex gap-2 p-1 bg-neutral-900 rounded-2xl w-fit border border-white/5">
             {isMe && (
@@ -375,7 +379,7 @@ function Profile() {
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'dashboard' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
               >
                 <LayoutDashboard size={18} />
-                Stats
+                Thống kê
               </button>
             )}
 
@@ -384,7 +388,7 @@ function Profile() {
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'routines' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
             >
               <Archive size={18} />
-              Routines
+              Thói quen
             </button>
 
             {isMe && (
@@ -393,7 +397,7 @@ function Profile() {
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'settings' ? 'bg-lime-400 text-black shadow-lg shadow-lime-400/20' : 'text-neutral-500 hover:text-white'}`}
               >
                 <Settings size={18} />
-                Settings
+                Cài đặt
               </button>
             )}
           </div>

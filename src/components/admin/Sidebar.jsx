@@ -7,10 +7,10 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   const navItems = [
-    { label: 'Dashboard', path: '/admin' },
-    { label: 'Categories', path: '/admin/categories' },
-    { label: 'Users', path: '/admin/users' },
-    { label: 'Revenue Analytics', path: '/admin/revenue' },
+    { label: 'Tổng quan', path: '/admin' },
+    { label: 'Danh mục', path: '/admin/categories' },
+    { label: 'Người dùng', path: '/admin/users' },
+    { label: 'Phân tích doanh thu', path: '/admin/revenue' },
   ];
 
   const isActive = (path) => {
@@ -21,7 +21,7 @@ export default function Sidebar() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    message.success('Logged out successfully');
+    message.success('Đăng xuất thành công');
     navigate('/login');
   };
 
@@ -29,7 +29,7 @@ export default function Sidebar() {
     <div className={styles.sidebar}>
       {/* Logo / Title */}
       <div className="p-6 border-b border-white/10">
-        <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+        <h1 className="text-2xl font-bold text-white">Trang quản trị</h1>
       </div>
 
       {/* Navigation Links */}
@@ -58,7 +58,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
         >
-          Logout
+          Đăng xuất
         </button>
       </div>
     </div>
