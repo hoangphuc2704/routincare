@@ -177,16 +177,27 @@ function Profile() {
           const res = await routineApi.getMyRoutines();
           data = res.data?.data || res.data || [];
         } else if (userId) {
-          // Strategy 1: dedicated user routines endpoint
+          // Strategy 1: Public routines endpoint - /api/users/:id/routines/public
           try {
-            const res = await routineApi.getPublicByUser(userId);
+            const res = await userApi.getPublicRoutines(userId, { page: 1, pageSize: 100 });
             const raw = res.data?.data || res.data;
             data = raw?.items || raw?.records || (Array.isArray(raw) ? raw : []);
           } catch (err) {
-            console.warn('getPublicByUser not available:', err);
+            console.warn('getPublicRoutines not available:', err);
           }
 
-          // Strategy 2: search with userId filter
+          // Strategy 2: dedicated user routines endpoint
+          if (data.length === 0) {
+            try {
+              const res = await routineApi.getPublicByUser(userId);
+              const raw = res.data?.data || res.data;
+              data = raw?.items || raw?.records || (Array.isArray(raw) ? raw : []);
+            } catch (err) {
+              console.warn('getPublicByUser not available:', err);
+            }
+          }
+
+          // Strategy 3: search with userId filter
           if (data.length === 0) {
             try {
               const searchRes = await routineApi.searchPublic({ userId, pageSize: 100 });
@@ -209,7 +220,7 @@ function Profile() {
             }
           }
 
-          // Strategy 3: public profile response
+          // Strategy 4: public profile response
           if (data.length === 0) {
             try {
               const profileRes = await userApi.getPublicProfile(userId);

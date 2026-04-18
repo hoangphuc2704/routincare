@@ -29,7 +29,9 @@ export default function TaskActions({
         {logLoading ? (
           <span className="text-[11px] text-zinc-500">Đang tải...</span>
         ) : (
-          <span className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}>
+          <span
+            className={`text-[11px] px-2 py-1 rounded-full border ${statusColor(normalizedStatus)}`}
+          >
             {statusLabel(normalizedStatus)}
           </span>
         )}
@@ -80,7 +82,7 @@ export default function TaskActions({
 
       <div className="space-y-2">
         <div className="grid grid-cols-3 gap-2 items-center">
-          <input
+          {/* <input
             type="text"
             value={evidenceInputs[taskStateKey] || ''}
             onChange={(e) =>
@@ -91,15 +93,15 @@ export default function TaskActions({
             }
             className="col-span-2 bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
             placeholder="Evidence URL"
-          />
-          <button
+          /> */}
+          {/* <button
             onClick={() => handleEvidence(taskLog?.id, taskId)}
             className="w-full bg-zinc-200 text-black font-bold py-2 rounded-lg active:scale-95 text-sm"
           >
             Lưu link / ảnh
-          </button>
+          </button> */}
         </div>
-        <div className="grid grid-cols-3 gap-2 items-center">
+        {/* <div className="grid grid-cols-3 gap-2 items-center">
           <input
             type="file"
             accept="image/*"
@@ -112,8 +114,10 @@ export default function TaskActions({
             }}
             className="col-span-2 text-xs text-white"
           />
-          <span className="text-[11px] text-zinc-500">{evidenceFiles[taskStateKey]?.name || 'Chọn ảnh'}</span>
-        </div>
+          <span className="text-[11px] text-zinc-500">
+            {evidenceFiles[taskStateKey]?.name || 'Chọn ảnh'}
+          </span>
+        </div> */}
       </div>
 
       {taskLog?.currentValue !== undefined && (
