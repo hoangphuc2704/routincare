@@ -174,62 +174,14 @@ function Profile() {
         let data = [];
 
         if (isMe) {
+          // Fetch my own routines
           const res = await routineApi.getMyRoutines();
           data = res.data?.data || res.data || [];
         } else if (userId) {
-          // Strategy 1: Public routines endpoint - /api/users/:id/routines/public
-          try {
-            const res = await userApi.getPublicRoutines(userId, { page: 1, pageSize: 100 });
-            const raw = res.data?.data || res.data;
-            data = raw?.items || raw?.records || (Array.isArray(raw) ? raw : []);
-          } catch (err) {
-            console.warn('getPublicRoutines not available:', err);
-          }
-
-          // Strategy 2: dedicated user routines endpoint
-          if (data.length === 0) {
-            try {
-              const res = await routineApi.getPublicByUser(userId);
-              const raw = res.data?.data || res.data;
-              data = raw?.items || raw?.records || (Array.isArray(raw) ? raw : []);
-            } catch (err) {
-              console.warn('getPublicByUser not available:', err);
-            }
-          }
-
-          // Strategy 3: search with userId filter
-          if (data.length === 0) {
-            try {
-              const searchRes = await routineApi.searchPublic({ userId, pageSize: 100 });
-              const searchData = searchRes.data?.data || searchRes.data;
-              const allRoutines =
-                searchData?.items ||
-                searchData?.records ||
-                (Array.isArray(searchData) ? searchData : []);
-              data = allRoutines.filter((item) => {
-                const ownerId =
-                  item.userId ||
-                  item.ownerId ||
-                  item.createdBy ||
-                  item.user?.id ||
-                  item.user?.userId;
-                return !ownerId || String(ownerId).toLowerCase() === String(userId).toLowerCase();
-              });
-            } catch (err) {
-              console.warn('Search public routines failed:', err);
-            }
-          }
-
-          // Strategy 4: public profile response
-          if (data.length === 0) {
-            try {
-              const profileRes = await userApi.getPublicProfile(userId);
-              const profileData = profileRes.data?.data || profileRes.data || {};
-              data = profileData.routines || profileData.publicRoutines || [];
-            } catch (err) {
-              console.warn('Public profile routines not available:', err);
-            }
-          }
+          // Fetch public routines of the viewed user
+          const res = await userApi.getPublicRoutines(userId, { page: 1, pageSize: 100 });
+          const raw = res.data?.data || res.data;
+          data = raw?.items || (Array.isArray(raw) ? raw : []);
         }
 
         const mapped = (data || []).map((item) => ({
