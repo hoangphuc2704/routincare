@@ -10,7 +10,7 @@ export default function Header() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    message.success('Logged out successfully');
+    message.success('Đăng xuất thành công');
     navigate('/login');
   };
 
@@ -48,7 +48,7 @@ export default function Header() {
           onMouseEnter={(e) => (e.target.style.opacity = '0.8')}
           onMouseLeave={(e) => (e.target.style.opacity = '1')}
         >
-          Logout
+          Đăng xuất
         </button>
       </div>
     </header>

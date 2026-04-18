@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
-import taskLogApi from '../api/taskLogApi';
+import taskLogApi from '../services/api/taskLogApi';
 import { message } from 'antd';
 
 export default function TaskCard({ task, onUpdate }) {
@@ -21,11 +21,11 @@ export default function TaskCard({ task, onUpdate }) {
                 date: new Date().toISOString().split('T')[0]
             };
             await taskLogApi.checkin(payload);
-            message.success(isCompleted ? 'Task un-checked' : 'Task completed!');
+            message.success(isCompleted ? 'Đã bỏ đánh dấu nhiệm vụ' : 'Đã hoàn thành nhiệm vụ!');
             if (onUpdate) onUpdate();
         } catch (err) {
             console.error('Check-in error:', err);
-            message.error('Failed to update task status');
+            message.error('Không thể cập nhật trạng thái nhiệm vụ');
         } finally {
             setLoading(false);
         }
@@ -61,7 +61,7 @@ export default function TaskCard({ task, onUpdate }) {
 
             <div className="mb-2">
                 <span className={`text-sm font-semibold ${isCompleted ? 'text-zinc-600' : 'text-[#d2fb05]'}`}>
-                    Description:
+                    Mô tả:
                 </span>
 
                 <p className={`text-xs whitespace-pre-line mt-1 leading-relaxed ${isCompleted ? 'text-zinc-700' : 'text-gray-300'}`}>
@@ -71,7 +71,7 @@ export default function TaskCard({ task, onUpdate }) {
 
             <div className="flex justify-end mt-2">
                 <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                    Status: {task.status}
+                    Trạng thái: {task.status}
                 </span>
             </div>
 

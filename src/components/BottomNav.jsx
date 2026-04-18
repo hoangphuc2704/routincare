@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { message } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
-import authApi from '../api/authApi';
-import userApi from '../api/userApi';
+import authApi from '../services/api/authApi';
+import userApi from '../services/api/userApi';
 import { clearAllAuth, getRefreshToken } from '../utils/tokenService';
-import { BellIcon, SearchIcon, UsersIcon } from './Icons';
+import { SearchIcon, UsersIcon } from './Icons';
 
 // --- Icons ---
 export const HomeIcon = ({ className, filled }) => (
@@ -153,7 +153,7 @@ export default function BottomNav({ activeItem }) {
 
       clearAllAuth();
       setMoreMenuOpen(false);
-      message.success('Da dang xuat');
+      message.success('Đã đăng xuất');
       navigate('/', { replace: true });
     } finally {
       setLogoutLoading(false);
@@ -166,12 +166,11 @@ export default function BottomNav({ activeItem }) {
       : 'p-1 text-white hover:text-[#d2fb05] transition-colors';
 
   const desktopItems = [
-    { key: 'home', to: '/home', label: 'Home', icon: HomeIcon },
-    { key: 'search', to: '/customer/users/search', label: 'Search', icon: SearchIcon },
-    { key: 'notification', to: '/notification', label: 'Notifications', icon: BellIcon },
-    { key: 'target', to: '/customer/selfroutin', label: 'Plan', icon: TargetIcon },
-    { key: 'message', to: '/customer/message', label: 'Chat', icon: MessageCircleIcon },
-    { key: 'friends', to: '/customer/friend/list', label: 'Friends', icon: UsersIcon },
+    { key: 'home', to: '/home', label: 'Trang chủ', icon: HomeIcon },
+    { key: 'search', to: '/customer/users/search', label: 'Tìm kiếm', icon: SearchIcon },
+    { key: 'target', to: '/customer/selfroutin', label: 'Kế hoạch', icon: TargetIcon },
+    { key: 'message', to: '/customer/message', label: 'Tin nhắn', icon: MessageCircleIcon },
+    { key: 'friends', to: '/customer/friend/list', label: 'Bạn bè', icon: UsersIcon },
   ];
 
   return (
@@ -204,14 +203,6 @@ export default function BottomNav({ activeItem }) {
             >
               <MessageCircleIcon className="w-6 h-6" filled={activeItem === 'message'} />
             </Link>
-
-            <Link
-              to="/notification"
-              className="p-2 text-white hover:text-[#d2fb05] transition-colors relative"
-            >
-              <BellIcon className="w-6 h-6" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-black" />
-            </Link>
           </div>
 
           <Link to="/profile" className="flex-shrink-0 transition-transform active:scale-90">
@@ -227,7 +218,7 @@ export default function BottomNav({ activeItem }) {
                   avatar ||
                   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop'
                 }
-                alt="Profile"
+                alt="Hồ sơ"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
@@ -282,7 +273,7 @@ export default function BottomNav({ activeItem }) {
             >
               <MoreIcon className="w-7 h-7 shrink-0" filled={moreMenuOpen} />
               <span className="text-sm font-medium whitespace-nowrap overflow-hidden max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 transition-all duration-150">
-                Xem them
+                Xem thêm
               </span>
             </button>
 
@@ -294,7 +285,7 @@ export default function BottomNav({ activeItem }) {
                   disabled={logoutLoading}
                   className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white whitespace-nowrap hover:bg-white/5 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                 >
-                  {logoutLoading ? 'Dang xuat...' : 'Dang xuat'}
+                  {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}
                 </button>
               </div>
             )}
@@ -314,12 +305,12 @@ export default function BottomNav({ activeItem }) {
                   avatar ||
                   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop'
                 }
-                alt="Profile"
+                alt="Hồ sơ"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
             <span className="text-sm font-medium text-white whitespace-nowrap overflow-hidden max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 transition-all duration-150">
-              Profile
+              Hồ sơ
             </span>
           </Link>
         </div>

@@ -7,10 +7,10 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   const navItems = [
-    { label: 'Dashboard', path: '/admin' },
-    { label: 'Categories', path: '/admin/categories' },
-    { label: 'Users', path: '/admin/users' },
-    { label: 'Revenue Analytics', path: '/admin/revenue' },
+    { label: 'Tổng quan', path: '/admin' },
+    { label: 'Danh mục', path: '/admin/categories' },
+    { label: 'Người dùng', path: '/admin/users' },
+    { label: 'Phân tích doanh thu', path: '/admin/revenue' },
   ];
 
   const isActive = (path) => {
@@ -21,7 +21,7 @@ export default function Sidebar() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    message.success('Logged out successfully');
+    message.success('Đăng xuất thành công');
     navigate('/login');
   };
 
@@ -85,7 +85,7 @@ export default function Sidebar() {
           onMouseEnter={(e) => (e.target.style.opacity = '0.8')}
           onMouseLeave={(e) => (e.target.style.opacity = '1')}
         >
-          Logout
+          Đăng xuất
         </button>
       </div>
     </div>

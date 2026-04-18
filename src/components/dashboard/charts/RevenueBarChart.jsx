@@ -19,7 +19,7 @@ const RevenueBarChart = ({ data = [], loading = false }) => {
     if (!safeData || safeData.length === 0) {
       console.log('⚠️ RevenueBarChart: No data provided');
       setChartState({
-        series: [{ name: 'Revenue', data: [] }],
+        series: [{ name: 'Doanh thu', data: [] }],
         options: getBarChartOptions([]),
       });
       return;
@@ -31,7 +31,7 @@ const RevenueBarChart = ({ data = [], loading = false }) => {
     setChartState({
       series: [
         {
-          name: 'Revenue (VND)',
+          name: 'Doanh thu (VND)',
           data: revenues,
         },
       ],
@@ -172,7 +172,7 @@ const RevenueBarChart = ({ data = [], loading = false }) => {
         </div>
       ) : (
         <div className="flex items-center justify-center h-80 text-gray-400">
-          <p>No data available</p>
+          <p>Không có dữ liệu</p>
         </div>
       )}
     </div>

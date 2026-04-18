@@ -21,7 +21,7 @@ const DateRangeFilter = ({ onRangeChange = () => {}, defaultRange = '30days' }) 
     <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700/50 mb-8">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
-          📅 Filter by Date Range
+          📅 Lọc theo khoảng thời gian
         </h3>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -43,9 +43,9 @@ const DateRangeFilter = ({ onRangeChange = () => {}, defaultRange = '30days' }) 
       </div>
 
       <div className="mt-4 text-xs text-gray-500">
-        {selectedRange === '7days' && '⏱️ Showing data from the last 7 days'}
-        {selectedRange === '30days' && '⏱️ Showing data from the last 30 days'}
-        {selectedRange === '1year' && '⏱️ Showing data from the last year'}
+        {selectedRange === '7days' && '⏱️ Hiển thị dữ liệu của 7 ngày gần đây'}
+        {selectedRange === '30days' && '⏱️ Hiển thị dữ liệu của 30 ngày gần đây'}
+        {selectedRange === '1year' && '⏱️ Hiển thị dữ liệu của 1 năm gần đây'}
       </div>
     </div>
   );

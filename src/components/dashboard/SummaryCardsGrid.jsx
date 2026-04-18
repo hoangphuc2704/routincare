@@ -32,7 +32,7 @@ const SummaryCard = ({ title, value, icon: Icon, trend, loading = false, color =
               }`}
             >
               <span>{trend > 0 ? '↑' : '↓'}</span>
-              <span className="ml-1">{Math.abs(trend)}% from last period</span>
+              <span className="ml-1">{Math.abs(trend)}% so với kỳ trước</span>
             </div>
           )}
         </div>
@@ -58,25 +58,25 @@ const SummaryCardsGrid = ({ data, loading = false }) => {
 
   const cards = [
     {
-      title: 'Total Revenue',
+      title: 'Tổng doanh thu',
       value: formatVND(data?.totalRevenue || 0),
       icon: () => <span className="text-xl">💰</span>,
       color: 'blue',
     },
     {
-      title: 'Successful Transactions',
+      title: 'Giao dịch thành công',
       value: (data?.successfulTransactions || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
       icon: () => <span className="text-xl">✅</span>,
       color: 'green',
     },
     {
-      title: 'Net Revenue',
+      title: 'Doanh thu ròng',
       value: formatVND(data?.netRevenue || 0),
       icon: () => <span className="text-xl">📈</span>,
       color: 'amber',
     },
     {
-      title: 'Pending Transactions',
+      title: 'Giao dịch chờ xử lý',
       value: (data?.pendingTransactions || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
       icon: () => <span className="text-xl">⏳</span>,
       color: 'purple',

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import userApi from '../api/userApi';
-import chatApi from '../api/chatApi';
-import friendApi from '../api/friendApi';
+import userApi from '../services/api/userApi';
+import chatApi from '../services/api/chatApi';
+import friendApi from '../services/api/friendApi';
 import {
   MessageCircle,
   UserPlus,
@@ -88,7 +88,7 @@ const getUniqueFollowingCountFromRoutines = (payload) => {
   return ids.size;
 };
 
-export default function UserHeader({ user: propUser, isMe }) {
+export default function UserHeader({ user: propUser, isMe, onEditProfile }) {
   const navigate = useNavigate();
   const [fetchedUser, setFetchedUser] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -363,7 +363,7 @@ export default function UserHeader({ user: propUser, isMe }) {
       setFollowLoading(true);
       const userId = user.id || user.userId;
       if (!userId) {
-        message.error('User ID not found');
+        message.error('Không tìm thấy ID người dùng');
         return;
       }
       if (isFollowing) {
@@ -387,7 +387,7 @@ export default function UserHeader({ user: propUser, isMe }) {
     if (isMe) return;
     const userId = user.id || user.userId;
     if (!userId) {
-      message.error('User ID not found');
+      message.error('Không tìm thấy ID người dùng');
       return;
     }
     try {
@@ -415,7 +415,7 @@ export default function UserHeader({ user: propUser, isMe }) {
     if (isMe || isBlocked) return;
     const userId = user.id || user.userId;
     if (!userId) {
-      message.error('User ID not found');
+      message.error('Không tìm thấy ID người dùng');
       return;
     }
     try {
@@ -465,7 +465,7 @@ export default function UserHeader({ user: propUser, isMe }) {
     try {
       const userId = user.id || user.userId;
       if (!userId) {
-        message.error('User ID not found');
+        message.error('Không tìm thấy ID người dùng');
         return;
       }
       console.log('💬 Creating direct chat with userId:', userId);
@@ -542,39 +542,45 @@ export default function UserHeader({ user: propUser, isMe }) {
         <div className="flex-1 space-y-4">
           <div>
             <h2 className="text-2xl font-black text-white mb-1 uppercase tracking-tight text-ellipsis overflow-hidden whitespace-nowrap">
-              {user.fullName || user.name || 'User'}
+              {user.fullName || user.name || 'Người dùng'}
             </h2>
             <p className="text-zinc-500 text-xs font-medium tracking-widest uppercase">
-              @{user.username || user.email?.split('@')[0] || 'member'}
+              @{user.username || user.email?.split('@')[0] || 'thanhvien'}
             </p>
           </div>
 
           <div className="flex justify-center md:justify-start gap-8 py-2 border-y border-white/5">
-            <Stat label="Routines" value={routineCount} />
-            <Stat label="Followers" value={followersCountState} />
-            <Stat label="Following" value={followingCountState} />
+            <Stat label="Thói quen" value={routineCount} />
+            <Stat label="Người theo dõi" value={followersCountState} />
+            <Stat label="Đang theo dõi" value={followingCountState} />
           </div>
 
           <p className="text-sm text-zinc-400 leading-relaxed max-w-sm mx-auto md:mx-0">
-            {user.bio || 'No bio yet. Start building habits together! 🚀'}
+            {user.bio || 'Chưa có mô tả. Hãy cùng xây dựng thói quen! 🚀'}
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2">
             {isMe ? (
               <div className="flex flex-wrap gap-3 w-full">
                 <button
-                  onClick={() => navigate('/profile')}
+                  onClick={() => {
+                    if (typeof onEditProfile === 'function') {
+                      onEditProfile();
+                      return;
+                    }
+                    navigate('/profile');
+                  }}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-black font-bold px-6 py-2.5 rounded-full text-sm hover:bg-neutral-200 transition-all active:scale-95 shadow-lg"
                 >
                   <Edit3 size={16} />
-                  Edit Profile
+                  Chỉnh sửa hồ sơ
                 </button>
                 <button
                   onClick={() => navigate('/customer/users/search')}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-neutral-900 text-white border border-white/10 font-semibold px-6 py-2.5 rounded-full text-sm hover:bg-neutral-800 transition-all active:scale-95 shadow-lg"
                 >
                   <Search size={16} />
-                  Tìm user
+                  Tìm người dùng
                 </button>
               </div>
             ) : (
@@ -591,7 +597,7 @@ export default function UserHeader({ user: propUser, isMe }) {
                   }`}
                 >
                   {isFollowing ? <UserCheck size={18} /> : <UserPlus size={18} />}
-                  {isFollowing ? 'Followed' : 'Follow'}
+                  {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
                 </button>
 
                 {friendStatus === 'incoming' ? (
