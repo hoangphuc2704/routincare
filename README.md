@@ -109,7 +109,7 @@ src/
 - configs/style: Tailwind + environment variables
 - Current env file: configs/style/.env
 - Build perf baseline config: configs/build/vite.config.js
-- Bundle budget checker: scripts/perf/check-bundle-size.mjs
+- Bundle budget checker: scripts/check-bundle-size.mjs
 
 ## Naming Conventions
 
@@ -121,6 +121,8 @@ src/
 ## API Documents
 
 - Backend REST specification: [docs/Api Specification](docs/Api%20Specification)
+- FE API full specification: [docs/FE_API.md](docs/FE_API.md)
+- FE DTOs reference: [docs/FE_DTOs.md](docs/FE_DTOs.md)
 - FE request/response contract: [docs/FE_API_REQUEST_RESPONSE.md](docs/FE_API_REQUEST_RESPONSE.md)
 - FE/backend coverage matrix: [docs/FE_BACKEND_API_COVERAGE.md](docs/FE_BACKEND_API_COVERAGE.md)
 
