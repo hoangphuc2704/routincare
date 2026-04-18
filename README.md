@@ -44,6 +44,28 @@ npm run build
 npm run preview
 ```
 
+### Vercel deployment check
+
+For local parity with Vercel build:
+
+```bash
+npm run build
+```
+
+If you need to reproduce Vercel project-specific behavior:
+
+```bash
+npx vercel pull --yes --environment=preview
+npx vercel build
+```
+
+Configured in-repo deployment settings are defined in [vercel.json](vercel.json):
+
+- framework: vite
+- buildCommand: npm run build
+- outputDirectory: dist
+- SPA rewrite: /(.*) -> /index.html
+
 ### Lint
 
 ```bash
