@@ -1,0 +1,26 @@
+{
+  "explorer.compactFolders": true,
+  "explorer.sortOrder": "type",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "package.json": ""
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.vscode": true,
+    "**/docs": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.vite": true,
+    "**/.vercel": true
+  },
+  "search.exclude": {
+    "**/docs": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.vite": true,
+    "**/.vercel": true
+  }
+}

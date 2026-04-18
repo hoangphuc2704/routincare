@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { message } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
-import authApi from '../api/authApi';
-import userApi from '../api/userApi';
+import authApi from '../services/api/authApi';
+import userApi from '../services/api/userApi';
 import { clearAllAuth, getRefreshToken } from '../utils/tokenService';
-import { BellIcon, SearchIcon, UsersIcon } from './Icons';
+import { SearchIcon, UsersIcon } from './Icons';
 
 // --- Icons ---
 export const HomeIcon = ({ className, filled }) => (
@@ -168,7 +168,6 @@ export default function BottomNav({ activeItem }) {
   const desktopItems = [
     { key: 'home', to: '/home', label: 'Home', icon: HomeIcon },
     { key: 'search', to: '/customer/users/search', label: 'Search', icon: SearchIcon },
-    { key: 'notification', to: '/notification', label: 'Notifications', icon: BellIcon },
     { key: 'target', to: '/customer/selfroutin', label: 'Plan', icon: TargetIcon },
     { key: 'message', to: '/customer/message', label: 'Chat', icon: MessageCircleIcon },
     { key: 'friends', to: '/customer/friend/list', label: 'Friends', icon: UsersIcon },
@@ -203,14 +202,6 @@ export default function BottomNav({ activeItem }) {
               className={`p-2 transition-all ${getItemClass('message')}`}
             >
               <MessageCircleIcon className="w-6 h-6" filled={activeItem === 'message'} />
-            </Link>
-
-            <Link
-              to="/notification"
-              className="p-2 text-white hover:text-[#d2fb05] transition-colors relative"
-            >
-              <BellIcon className="w-6 h-6" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-black" />
             </Link>
           </div>
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import chatApi from '../api/chatApi';
-import signalRService from '../service/signalRService';
+import chatApi from '../services/api/chatApi';
+import signalRService from '../services/core/signalRService';
 import { getAccessToken } from '../utils/tokenService';
 
 const ChatContext = createContext();

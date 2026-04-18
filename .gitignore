@@ -255,3 +255,8 @@ buck-out/
 .fakebuckversion
 
 # End of https://www.toptal.com/developers/gitignore/api/reactnative
+
+# Vite and deployment artifacts
+.vite/
+dist/
+.vercel/

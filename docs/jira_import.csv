@@ -1,0 +1,290 @@
+Summary,Issue Type,Description,Story Points,Epic Link,Labels
+"AUTH-01: Register with Email - BE",Story,"As a User, I want to register a new account with email and password, so that I can start using the app.
+
+AC-01: The system must display a registration form with fields: Full Name, Email, Password, Confirm Password.
+AC-02: When the user submits the form, the system must validate all required fields are filled.
+AC-03: If Email is already registered, the system must display: ""Email already exists.""
+AC-04: If Password does not match Confirm Password, the system must display: ""Passwords do not match.""
+AC-05: If Password is less than 6 characters, the system must display: ""Password must be at least 6 characters.""
+AC-06: On successful registration, the system must create the account, log the user in automatically, and redirect to the Home screen.
+AC-07: The system must return access token and refresh token for session management.",5,ROUT-12,Auth;BE
+"AUTH-02: Send OTP to Email - BE",Story,"As a User, I want to receive an OTP code to my email, so that I can verify my email address.
+
+AC-01: The system must display a ""Send OTP"" button after entering email.
+AC-02: When the user clicks ""Send OTP"", the system must generate a 6-digit OTP code.
+AC-03: The system must send the OTP to the user's email within 30 seconds.
+AC-04: The OTP must expire after 5 minutes.
+AC-05: If the email is invalid, the system must display: ""Invalid email format.""
+AC-06: On success, the system must display: ""OTP sent to your email.""
+AC-07: The user can request a new OTP after 60 seconds (resend cooldown).",5,ROUT-12,Auth;BE
+"AUTH-03: Verify OTP - BE",Story,"As a User, I want to verify my email by entering the OTP code, so that my account becomes verified.
+
+AC-01: The system must display an OTP input screen with 6 digit boxes.
+AC-02: When the user enters the correct OTP, the system must mark the account as verified.
+AC-03: If the OTP is incorrect, the system must display: ""Invalid OTP code.""
+AC-04: If the OTP has expired, the system must display: ""OTP expired. Please request a new one.""
+AC-05: After 5 failed attempts, the system must block further attempts for 15 minutes.
+AC-06: On successful verification, the system must redirect to the Home screen.",3,ROUT-12,Auth;BE
+"AUTH-04: Login with Email - BE",Story,"As a User, I want to login with my email and password, so that I can access my account.
+
+AC-01: The system must display a login form with Email and Password fields.
+AC-02: When the user submits the form, the system must validate credentials.
+AC-03: If the email is not registered, the system must display: ""Email not found.""
+AC-04: If the password is incorrect, the system must display: ""Invalid email or password.""
+AC-05: On successful login, the system must redirect to the Home screen.
+AC-06: The system must return access token (expires in 1 hour) and refresh token (expires in 7 days).",3,ROUT-12,Auth;BE
+"AUTH-05: Login with Google - BE",Story,"As a User, I want to login with my Google account, so that I can sign in quickly without creating a new password.
+
+AC-01: The system must display a ""Continue with Google"" button on the login screen.
+AC-02: When the user clicks the button, the system must redirect to Google OAuth consent screen.
+AC-03: After Google authentication, if email already exists (local account), the system must link the Google account to the existing account.
+AC-04: If email does not exist, the system must create a new account with Google information.
+AC-05: On success, the system must redirect to the Home screen with the user logged in.
+AC-06: The system must store Google Subject ID for future logins.",5,ROUT-12,Auth;BE
+"AUTH-06: Refresh Token - BE",Story,"As a User, I want my session to be refreshed automatically, so that I don't have to login again frequently.
+
+AC-01: When the access token expires, the system must use the refresh token to obtain a new access token.
+AC-02: If the refresh token is valid, the system must return a new access token.
+AC-03: If the refresh token is expired or invalid, the system must redirect to the Login screen.
+AC-04: The system must not require user interaction for token refresh.",3,ROUT-12,Auth;BE
+"USER-01: Update Profile - BE",Story,"As a User, I want to update my profile information (name, bio, avatar), so that I can personalize my account.
+
+AC-01: The system must display a Profile Edit screen with current user information pre-filled.
+AC-02: The user can edit: Full Name, Bio (max 500 characters), Avatar.
+AC-03: When the user saves changes, the system must update the profile.
+AC-04: On success, the system must display: ""Profile updated successfully.""
+AC-05: If Bio exceeds 500 characters, the system must display: ""Bio must be under 500 characters.""",3,ROUT-12,User;BE
+"RTN-01: Create Routine - BE",Story,"As a User, I want to create a new Routine, so that I can start organizing my daily habits.
+
+AC-01: The system must display a ""Create Routine"" form with fields: Title, Description, Category, Theme Color, Schedule, Visibility.
+AC-02: Title is required. If empty, the system must display: ""Title is required.""
+AC-03: If Title exceeds 200 characters, the system must display: ""Title must be under 200 characters.""
+AC-04: The user can select Category from: Health, Study, Work, Lifestyle, Other.
+AC-05: The user can select Schedule: Daily (every day) or Weekly (specific days).
+AC-06: The user can set Visibility: Private or Public.
+AC-07: On save, the system must create the Routine and redirect to the Routine Detail screen.
+AC-08: The system must display: ""Routine created successfully.""",5,ROUT-13,Routine;BE
+"RTN-02: Add Tasks to Routine - BE",Story,"As a User, I want to add Tasks to my Routine, so that I can break down my habits into actionable steps.
+
+AC-01: On the Routine Detail screen, the system must display an ""Add Task"" button.
+AC-02: When adding a task, the user must enter: Task Title, Task Type (Checkbox or Quantity), Icon.
+AC-03: If Task Type is Quantity, the user must enter: Target Value (e.g., 2000) and Unit Name (e.g., ""ml"").
+AC-04: The user can select an icon from the icon library for visual appeal.
+AC-05: Tasks must be displayed in the order they were added.
+AC-06: On save, the system must add the task and display: ""Task added.""",5,ROUT-13,Routine;BE
+"RTN-03: Reorder Tasks - BE",Story,"As a User, I want to reorder my Tasks by dragging, so that I can prioritize the most important steps first.
+
+AC-01: The system must allow drag and drop to reorder tasks on the Routine Detail screen.
+AC-02: When the user releases a task in a new position, the system must save the new order.
+AC-03: The new order must persist when the screen is refreshed.
+AC-04: On success, the system must display a brief confirmation (e.g., toast: ""Order updated"").",3,ROUT-13,Routine;BE
+"RTN-04: Edit Routine - BE",Story,"As a User, I want to edit my Routine details, so that I can update the title, description, or schedule.
+
+AC-01: The system must display an ""Edit"" button on the Routine Detail screen.
+AC-02: When clicked, the system must open the Edit form with current values pre-filled.
+AC-03: The user can modify: Title, Description, Category, Theme Color, Schedule, Visibility.
+AC-04: On save, the system must update the Routine and display: ""Routine updated successfully.""
+AC-05: Only the owner of the Routine can edit it.",3,ROUT-13,Routine;BE
+"RTN-05: Delete Routine - BE",Story,"As a User, I want to delete my Routine, so that I can remove habits I no longer follow.
+
+AC-01: The system must display a ""Delete"" button on the Routine Detail or Edit screen.
+AC-02: When clicked, the system must display a confirmation dialog: ""Are you sure you want to delete this Routine?"" with ""Yes"" and ""No"" options.
+AC-03: If the user clicks ""Yes"", the system must delete the Routine and redirect to the My Routines screen.
+AC-04: The system must display: ""Routine deleted successfully.""
+AC-05: If the user clicks ""No"", the system must close the dialog with no changes.
+AC-06: Only the owner of the Routine can delete it.",2,ROUT-13,Routine;BE
+"RTN-06: View My Routines - BE",Story,"As a User, I want to view all my Routines with their Tasks, so that I can see my habits at a glance.
+
+AC-01: The system must display a ""My Routines"" screen listing all Routines owned by the user.
+AC-02: Each Routine card must show: Title, Theme Color, Category, Task Count.
+AC-03: When the user taps a Routine, the system must navigate to the Routine Detail screen.
+AC-04: If the user has no Routines, the system must display: ""No routines yet. Create your first one!""
+AC-05: Deleted Routines must not appear in the list.",3,ROUT-13,Routine;BE
+"RTN-07: Set Weekly Schedule - BE",Story,"As a User, I want to set my Routine to repeat on specific days of the week, so that I can customize when to perform my habits.
+
+AC-01: When creating/editing a Routine, the user can select ""Weekly"" schedule.
+AC-02: If Weekly is selected, the system must display day checkboxes: Mon, Tue, Wed, Thu, Fri, Sat, Sun.
+AC-03: The user must select at least one day. If none selected, display: ""Please select at least one day.""
+AC-04: On the Home/Today screen, only Routines scheduled for today must be displayed.
+AC-05: Daily Routines must appear every day.",3,ROUT-13,Routine;BE
+"RTN-08: Select Task Icon - BE",Story,"As a User, I want to select an icon for each Task, so that my Routine looks visually appealing.
+
+AC-01: When adding/editing a Task, the system must display an icon picker.
+AC-02: The icon picker must show popular icons: water, book, run, sleep, eat, study, etc.
+AC-03: The user can optionally select an icon color.
+AC-04: If no icon is selected, the system must use a default icon.
+AC-05: The selected icon must display next to the Task title.",2,ROUT-13,Routine;BE
+"RTN-09: Set Routine Visibility - BE",Story,"As a User, I want to set my Routine as Private or Public, so that I can control who can see it.
+
+AC-01: When creating/editing a Routine, the user can set Visibility: Private or Public.
+AC-02: Private Routines are only visible to the owner.
+AC-03: Public Routines appear in the Discover Feed and can be copied by others.
+AC-04: Default visibility for new Routines must be Public.
+AC-05: The visibility status must be indicated on the Routine card (e.g., lock icon for Private).",2,ROUT-13,Routine;BE
+"LOG-01: Check-in Checkbox Task - BE",Story,"As a User, I want to tap a Checkbox task to mark it as done, so that I can track my daily progress.
+
+AC-01: On the Today screen, each Checkbox task must display an unchecked circle.
+AC-02: When the user taps the circle, the system must mark the task as Completed.
+AC-03: The circle must change to a filled checkmark with animation.
+AC-04: The Routine's completion percentage must update immediately.
+AC-05: If the user taps again, the system must allow undo (uncheck).",3,ROUT-14,Tracking;BE
+"LOG-02: Log Quantity Task - BE",Story,"As a User, I want to log a numeric value for Quantity tasks, so that I can track progress toward my target.
+
+AC-01: On the Today screen, Quantity tasks must display: current value / target value (e.g., ""500 / 2000 ml"").
+AC-02: When the user taps the task, the system must open a number input dialog.
+AC-03: The user can add to the current value (e.g., add 250ml to existing 500ml).
+AC-04: When current value reaches or exceeds target, the system must mark the task as Completed.
+AC-05: A progress bar must visually show completion percentage.",3,ROUT-14,Tracking;BE
+"LOG-03: Skip Task - BE",Story,"As a User, I want to skip a task for today, so that I can mark it as intentionally not done without breaking my streak.
+
+AC-01: Each task must have a ""Skip"" option (swipe or menu).
+AC-02: When the user skips a task, the system must mark it as Skipped (gray color).
+AC-03: Skipped tasks must not count toward the daily completion percentage.
+AC-04: Skipped tasks must not break the user's streak.
+AC-05: The user can ""Unskip"" to return the task to normal state.",2,ROUT-14,Tracking;BE
+"LOG-04: View Today's Progress - BE",Story,"As a User, I want to view my today's Routines with completion status, so that I can track my daily progress.
+
+AC-01: The Today screen must display all Routines scheduled for today.
+AC-02: Each Routine card must show: Title, completion percentage, and list of Tasks.
+AC-03: Completed tasks must show a green checkmark.
+AC-04: In-progress Quantity tasks must show a progress bar.
+AC-05: An overall daily completion percentage must be displayed at the top.
+AC-06: If all tasks are completed, the system must display: ""Great job! All done for today!""",3,ROUT-14,Tracking;BE
+"LOG-05: Undo Check-in - BE",Story,"As a User, I want to undo my check-in for today, so that I can correct mistakes.
+
+AC-01: Completed tasks must allow undo by tapping again.
+AC-02: When undone, the task returns to ""In Progress"" state.
+AC-03: The completion percentage must recalculate immediately.
+AC-04: Only today's check-ins can be undone. Past days are locked.
+AC-05: If user tries to edit past log, display: ""Past logs cannot be edited.""",2,ROUT-14,Tracking;BE
+"LOG-06: Generate Daily Summary - BE",Story,"As the System, I want to generate a daily summary at end of day, so that analytics can be calculated.
+
+AC-01: At 23:59 (or user's timezone), the system must calculate and save the daily summary.
+AC-02: The summary must include: total tasks scheduled, tasks completed, completion percentage.
+AC-03: If completion percentage >= 80%, the day counts toward the streak.
+AC-04: If the user had no scheduled tasks, no summary is generated.
+AC-05: The job must run automatically without user action.",5,ROUT-14,Tracking;BE
+"STREAK-01: Calculate Streak - BE",Story,"As the System, I want to calculate the user's current streak, so that users can see their consecutive days of success.
+
+AC-01: Streak = number of consecutive days with completion rate >= 80%.
+AC-02: A missed day (no activity or rate < 80%) resets the streak to 0.
+AC-03: Skipped tasks do not count against the streak.
+AC-04: The streak must update daily after the summary is generated.
+AC-05: The system must also track ""longest streak"" for personal records.",5,ROUT-15,Analytics;BE
+"STREAK-02: View My Streak - BE",Story,"As a User, I want to see my current streak on my profile, so that I feel motivated by my consistency.
+
+AC-01: The profile screen must display: ""X days streak"" prominently.
+AC-02: If streak is 0, display: ""Start your streak today!""
+AC-03: The longest streak must be shown below current streak.
+AC-04: Streak must be visible on public profile as well.",2,ROUT-15,Analytics;BE
+"HEAT-01: Generate Heatmap Data - BE",Story,"As the System, I want to generate heatmap data from daily summaries, so that users can visualize their activity.
+
+AC-01: The heatmap must show the last 90 days of activity.
+AC-02: Each day cell has a color intensity based on completion rate: 0%=empty, 1-25%=light, 26-50%=medium, 51-75%=dark, 76-100%=full.
+AC-03: Days with no activity must be shown as empty (gray).
+AC-04: The user can view other periods: 30, 90, 180, or 365 days.",5,ROUT-15,Analytics;BE
+"HEAT-02: View My Heatmap - BE",Story,"As a User, I want to see my activity heatmap on my profile, so that I can visualize my long-term consistency.
+
+AC-01: The profile screen must display a GitHub-style heatmap grid.
+AC-02: The grid must have 7 rows (days of week) and columns (weeks).
+AC-03: Hovering/tapping a cell must show the date and completion rate.
+AC-04: A legend must explain the color intensity levels.",3,ROUT-15,Analytics;BE
+"USER-02: View Public Profile - BE",Story,"As a User, I want to view another user's public profile, so that I can see their habits and progress.
+
+AC-01: When navigating to a user's profile, the system must display: Avatar, Name, Bio, Streak, Heatmap, and public Routines.
+AC-02: If the user has no public Routines, the system must display: ""No public routines.""
+AC-03: The system must display follower count and following count.
+AC-04: The system must show a Follow/Unfollow button (if not viewing own profile).",2,ROUT-12,User;BE
+"USER-03: Upload Avatar - BE",Story,"As a User, I want to upload a profile picture, so that my profile has a personal photo.
+
+AC-01: The system must display an ""Upload Photo"" button on the Profile Edit screen.
+AC-02: When the user selects a photo, the system must upload it to cloud storage.
+AC-03: Accepted formats: JPEG, PNG, WebP. Max size: 5MB.
+AC-04: If the file is too large, the system must display: ""Image must be under 5MB.""
+AC-05: On success, the system must update the avatar preview immediately.",3,ROUT-12,User;BE
+"PHOTO-01: Upload Photo Evidence - BE",Story,"As a User, I want to upload a photo when checking in, so that I can share my progress with the community.
+
+AC-01: When checking in a task, the system must display an optional ""Add Photo"" button.
+AC-02: When clicked, the system must open the camera or photo gallery.
+AC-03: Accepted formats: JPEG, PNG, WebP. Max size: 5MB.
+AC-04: If file is too large, display: ""Image must be under 5MB.""
+AC-05: On success, the photo must appear attached to the check-in.
+AC-06: Photos must be stored securely in cloud storage.",5,ROUT-16,Social;BE
+"PHOTO-02: View My Photo Gallery - BE",Story,"As a User, I want to view all my uploaded photos in a gallery, so that I can see my progress history.
+
+AC-01: The Profile screen must have a ""Gallery"" tab showing all uploaded photos.
+AC-02: Photos must be displayed in a grid, sorted by date (newest first).
+AC-03: Tapping a photo must show full-screen view with: date, task name, routine name.
+AC-04: If no photos, display: ""No photos yet. Start capturing your progress!""",2,ROUT-16,Social;BE
+"HEAT-03: View Other User's Heatmap - BE",Story,"As a User, I want to view another user's heatmap on their public profile, so that I can see their activity level.
+
+AC-01: Public profiles must display the user's heatmap.
+AC-02: Private profiles must hide the heatmap.
+AC-03: The viewer cannot see detailed check-in logs, only the heatmap summary.",2,ROUT-15,Analytics;BE
+"COPY-01: Copy Routine - BE",Story,"As a User, I want to copy a Routine from another user, so that I can follow their habit template.
+
+AC-01: On a public Routine Detail screen, the system must display a ""Copy"" button.
+AC-02: When clicked, the system must show confirmation: ""Copy this Routine to your list?""
+AC-03: If the user confirms, the system must clone the Routine (including all Tasks) to the user's account.
+AC-04: The copied Routine must be set to Private by default.
+AC-05: On success, redirect to the new Routine and display: ""Routine copied successfully!""
+AC-06: The copy count on the original Routine must increase by 1.",8,ROUT-17,Social;BE
+"COPY-02: Edit Copied Routine - BE",Story,"As a User, I want to edit my copied Routine independently, so that I can customize it for myself.
+
+AC-01: A copied Routine must be fully editable (title, tasks, schedule).
+AC-02: Changes to the copy must NOT affect the original Routine.
+AC-03: Changes to the original must NOT affect the copy.
+AC-04: The copied Routine must indicate it was copied: ""Copied from @username"".",3,ROUT-17,Social;BE
+"COPY-03: View Copy Count - BE",Story,"As a Creator, I want to see how many people copied my Routine, so that I can measure its popularity.
+
+AC-01: On my Routine Detail screen, the system must display: ""X people copied this.""
+AC-02: The copy count must update in real-time when others copy.
+AC-03: Optionally, the creator can view a list of users who copied (public profiles only).",2,ROUT-17,Social;BE
+"FEED-01: Discover Feed - BE",Story,"As a User, I want to browse a Discover Feed of public Routines, so that I can find and copy routines from others.
+
+AC-01: The Discover screen must display public Routines from all users.
+AC-02: Each Routine card must show: Title, Category, Creator name & avatar, Copy count.
+AC-03: The user can filter by Category (Health, Study, Work, etc.).
+AC-04: The user can sort by: Most Popular (copies) or Newest.
+AC-05: Tapping a Routine must navigate to the Routine Detail screen.
+AC-06: Private Routines must not appear in the feed.",5,ROUT-16,Social;BE
+"FEED-02: Recent Check-ins Feed - BE",Story,"As a User, I want to see recent check-ins with photos from the community, so that I can get inspired.
+
+AC-01: The Activity tab must display recent check-ins with photos.
+AC-02: Each card must show: User avatar & name, Photo, Task & Routine name, Timestamp.
+AC-03: Only check-ins from public Routines must be shown.
+AC-04: The feed must be sorted by newest first.
+AC-05: Tapping a card must navigate to the user's profile.",5,ROUT-16,Social;BE
+"FEED-03: Search Routines - BE",Story,"As a User, I want to search for Routines by keyword, so that I can find specific habits.
+
+AC-01: The Discover screen must have a Search bar at the top.
+AC-02: When the user types, the system must filter Routines matching the keyword.
+AC-03: Search must match against Title and Description.
+AC-04: If no results, display: ""No routines found. Try a different keyword.""
+AC-05: Results must be displayed as the user types (live search).",3,ROUT-16,Social;BE
+"FOLLOW-01: Follow User - BE",Story,"As a User, I want to follow another user, so that I can see their activity in my feed.
+
+AC-01: On a user's profile, the system must display a ""Follow"" button.
+AC-02: When clicked, the system must add the user to my Following list.
+AC-03: The button must change to ""Following"" (with option to Unfollow).
+AC-04: If I try to follow myself, display: ""You cannot follow yourself.""
+AC-05: The followed user's follower count must increase by 1.",3,ROUT-17,Social;BE
+"FOLLOW-02: Unfollow User - BE",Story,"As a User, I want to unfollow another user, so that I stop seeing their activity.
+
+AC-01: On a followed user's profile, the button must show ""Following"".
+AC-02: When clicked, display confirmation: ""Unfollow @username?""
+AC-03: If confirmed, remove them from my Following list.
+AC-04: The button must revert to ""Follow"".
+AC-05: The user's follower count must decrease by 1.",2,ROUT-17,Social;BE
+"FOLLOW-03: View Followers/Following - BE",Story,"As a User, I want to view my followers and following lists, so that I can manage my connections.
+
+AC-01: The Profile screen must display: ""X Followers"" and ""X Following"".
+AC-02: Tapping either must open a list of users.
+AC-03: Each user in the list must show: Avatar, Name, Follow/Following button.
+AC-04: The list must be scrollable with pagination.",3,ROUT-17,Social;BE
+"FOLLOW-04: Following Feed - BE",Story,"As a User, I want to see a feed of check-ins from people I follow, so that I stay connected with my network.
+
+AC-01: The Activity tab must have a ""Following"" section.
+AC-02: This section must show check-ins only from users I follow.
+AC-03: Check-ins from private Routines of followed users must be visible (if I follow them).
+AC-04: If I don't follow anyone, display: ""Follow users to see their activity here.""",5,ROUT-17,Social;BE

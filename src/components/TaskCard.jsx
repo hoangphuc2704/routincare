@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
-import taskLogApi from '../api/taskLogApi';
+import taskLogApi from '../services/api/taskLogApi';
 import { message } from 'antd';
 
 export default function TaskCard({ task, onUpdate }) {

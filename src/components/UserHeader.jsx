@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import userApi from '../api/userApi';
-import chatApi from '../api/chatApi';
-import friendApi from '../api/friendApi';
+import userApi from '../services/api/userApi';
+import chatApi from '../services/api/chatApi';
+import friendApi from '../services/api/friendApi';
 import {
   MessageCircle,
   UserPlus,
