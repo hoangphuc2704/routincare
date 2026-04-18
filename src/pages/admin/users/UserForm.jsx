@@ -110,7 +110,9 @@ export default function UserForm({ onClose, user }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email Field */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
+          <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--accent)' }}>
+            Email *
+          </label>
           <input
             type="email"
             name="email"
@@ -118,37 +120,56 @@ export default function UserForm({ onClose, user }) {
             onChange={handleChange}
             placeholder="Nhập địa chỉ email"
             disabled={!!user}
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 disabled:bg-gray-100 ${
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-white disabled:opacity-50 ${
               errors.email ? 'border-red-500' : 'border-gray-300'
             }`}
+            style={{
+              backgroundColor: '#3a3a3a',
+              color: 'white',
+              borderColor: errors.email ? '#ef4444' : 'var(--admin-border)',
+            }}
           />
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
         </div>
 
         {/* Full Name Field */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Họ và tên *</label>
+          <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--accent)' }}>
+            Full Name *
+          </label>
           <input
             type="text"
             name="fullName"
             value={formData.fullName}
             onChange={handleChange}
-            placeholder="Nhập họ và tên"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 ${
+            placeholder="Enter full name"
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-white ${
               errors.fullName ? 'border-red-500' : 'border-gray-300'
             }`}
+            style={{
+              backgroundColor: '#3a3a3a',
+              color: 'white',
+              borderColor: errors.fullName ? '#ef4444' : 'var(--admin-border)',
+            }}
           />
           {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
         </div>
 
         {/* Role Field */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Vai trò *</label>
+          <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--accent)' }}>
+            Role *
+          </label>
           <select
             name="role"
             value={formData.role}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-white"
+            style={{
+              backgroundColor: '#3a3a3a',
+              color: 'white',
+              borderColor: 'var(--admin-border)',
+            }}
           >
             {ROLES.map((role) => (
               <option key={role.value} value={role.value}>
@@ -161,16 +182,23 @@ export default function UserForm({ onClose, user }) {
         {/* Password Field - Only for new users */}
         {!user && (
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Mật khẩu *</label>
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--accent)' }}>
+              Password *
+            </label>
             <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 ${
+              placeholder="Enter password (min 6 characters)"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-white ${
                 errors.password ? 'border-red-500' : 'border-gray-300'
               }`}
+              style={{
+                backgroundColor: '#3a3a3a',
+                color: 'white',
+                borderColor: errors.password ? '#ef4444' : 'var(--admin-border)',
+              }}
             />
             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
           </div>

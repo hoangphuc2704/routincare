@@ -161,7 +161,7 @@ const RevenueBarChart = ({ data = [], loading = false }) => {
   return (
     <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-green-900/20">
       <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-        <span>📊</span> Doanh thu theo gói
+        <span>📊</span> Top Plans Distribution
       </h3>
       {chartState.series &&
       chartState.series[0] &&

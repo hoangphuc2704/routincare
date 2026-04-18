@@ -79,30 +79,45 @@ export default function CategoryForm({ onClose, category }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Field */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Tên danh mục *</label>
+          <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--accent)' }}>
+            Category Name *
+          </label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
-            placeholder="Nhập tên danh mục"
-            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 ${
+            placeholder="Enter category name"
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-white ${
               errors.name ? 'border-red-500' : 'border-gray-300'
             }`}
+            style={{
+              backgroundColor: '#3a3a3a',
+              color: 'white',
+              borderColor: errors.name ? '#ef4444' : 'var(--admin-border)',
+              focusRing: 'var(--accent)',
+            }}
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
         </div>
 
         {/* Description Field */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả</label>
+          <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--accent)' }}>
+            Description
+          </label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleChange}
             placeholder="Nhập mô tả danh mục (không bắt buộc)"
             rows="4"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 resize-none"
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-white resize-none"
+            style={{
+              backgroundColor: '#3a3a3a',
+              color: 'white',
+              borderColor: 'var(--admin-border)',
+            }}
           />
         </div>
 

@@ -30,6 +30,10 @@ const userApi = {
   block: (id) => axiosClient.post(`/api/Users/${id}/block`),
   unblock: (id) => axiosClient.delete(`/api/Users/${id}/block`),
   getBlocked: () => axiosClient.get('/api/Users/me/blocks'),
+
+  // Get user's public routines
+  getPublicRoutines: (userId, params) =>
+    axiosClient.get(`/api/users/${userId}/routines/public`, { params }),
 };
 
 export default userApi;

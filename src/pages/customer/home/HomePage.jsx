@@ -60,21 +60,22 @@ export default function Homepage() {
     return () => observer.disconnect();
   }, [activeTab, loadMoreFeed]);
 
-  const handleOpenCopyPreview = useCallback(async (target) => {
-    const postId = target?.id;
-    const routineId = target?.routineId;
+  const handleOpenCopyPreview = useCallback(
+    async (target) => {
+      const postId = target?.id;
+      const routineId = target?.routineId;
 
     if (!postId || !routineId) {
       message.info('Bài đăng này chưa có thói quen để sao chép.');
       return;
     }
 
-    if (copyLoadingByPost[postId]) return;
+      if (copyLoadingByPost[postId]) return;
 
-    setSelectedCopyTarget(target);
-    setPreviewRoutine(null);
-    setPreviewOpen(true);
-    setPreviewLoading(true);
+      setSelectedCopyTarget(target);
+      setPreviewRoutine(null);
+      setPreviewOpen(true);
+      setPreviewLoading(true);
 
     try {
       const detailRes = await routineApi.getById(routineId);
@@ -128,22 +129,22 @@ export default function Homepage() {
               activeTab === TAB.FEED ? 'text-white' : 'text-white/55 hover:text-white/85'
             }`}
           >
-            Theo dõi
+            Khám phá
             {activeTab === TAB.FEED && (
               <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#d2fb05] rounded-full" />
             )}
           </button>
-          <button
+          {/* <button
             onClick={() => setActiveTab(TAB.EXPLORE)}
             className={`relative py-2.5 text-sm font-semibold transition-colors ${
               activeTab === TAB.EXPLORE ? 'text-white' : 'text-white/55 hover:text-white/85'
             }`}
           >
-            Khám phá
+            Theo dõi
             {activeTab === TAB.EXPLORE && (
               <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#d2fb05] rounded-full" />
             )}
-          </button>
+          </button> */}
         </div>
 
         {loading ? (
@@ -206,12 +207,18 @@ export default function Homepage() {
                     className="rounded-3xl border border-white/10 bg-neutral-950/70 overflow-hidden"
                   >
                     {routine.image ? (
-                      <img src={routine.image} alt={routine.title} className="h-36 w-full object-cover" />
+                      <img
+                        src={routine.image}
+                        alt={routine.title}
+                        className="h-36 w-full object-cover"
+                      />
                     ) : (
                       <div className="h-36 w-full bg-[linear-gradient(135deg,#d2fb05_0%,#6c8b05_100%)]" />
                     )}
                     <div className="p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-[#d2fb05]">{routine.category}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-[#d2fb05]">
+                        {routine.category}
+                      </p>
                       <h3 className="text-base font-bold mt-1 line-clamp-1">{routine.title}</h3>
                       <p className="text-sm text-white/65 mt-1 line-clamp-2">
                         {routine.description || 'Thói quen công khai đang thu hút nhiều người dùng.'}

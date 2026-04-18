@@ -5,26 +5,55 @@ import useUsers from '../../hooks/useUsers';
 
 const StatCard = ({ title, value, icon, color }) => {
   return (
-    <div className="bg-neutral-900 border border-white/10 rounded-lg p-6">
+    <div
+      className="border rounded-lg p-6"
+      style={{
+        backgroundColor: 'var(--admin-card)',
+        borderColor: 'var(--admin-border)',
+      }}
+    >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-400 text-sm font-medium">{title}</p>
-          <p className={`text-3xl font-bold mt-2 ${color}`}>{value}</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--admin-text-secondary)' }}>
+            {title}
+          </p>
+          <p className="text-3xl font-bold mt-2" style={{ color }}>
+            {value}
+          </p>
         </div>
-        <div className={`text-4xl opacity-20`}>{icon}</div>
+        <div className="text-4xl opacity-20">{icon}</div>
       </div>
     </div>
   );
 };
 
 const QuickActionButton = ({ label, icon, onClick }) => {
+  const handleMouseEnter = (e) => {
+    e.currentTarget.style.borderColor = 'var(--accent)';
+    e.currentTarget.style.boxShadow = '0 10px 20px rgba(170, 59, 255, 0.15)';
+  };
+
+  const handleMouseLeave = (e) => {
+    e.currentTarget.style.borderColor = 'var(--admin-border)';
+    e.currentTarget.style.boxShadow = 'none';
+  };
+
   return (
     <button
       onClick={onClick}
-      className="bg-neutral-900 border border-white/10 hover:border-purple-600 rounded-lg p-6 text-center transition-all duration-200 hover:shadow-lg hover:shadow-purple-600/20"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="rounded-lg p-6 text-center transition-all duration-200"
+      style={{
+        backgroundColor: 'var(--admin-card)',
+        borderColor: 'var(--admin-border)',
+        border: '1px solid',
+      }}
     >
       <div className="text-4xl mb-3">{icon}</div>
-      <p className="text-white font-semibold">{label}</p>
+      <p className="font-semibold" style={{ color: 'var(--admin-text)' }}>
+        {label}
+      </p>
     </button>
   );
 };
@@ -54,27 +83,36 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Chào mừng đến trang quản trị</h1>
-        <p className="text-gray-400 text-lg">
-          Quản lý cài đặt hệ thống, người dùng và nội dung
+        <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--admin-text)' }}>
+          Welcome to Admin Dashboard
+        </h1>
+        <p className="text-lg" style={{ color: 'var(--admin-text-secondary)' }}>
+          Manage your application settings, users, and content
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title="Tổng người dùng" value={stats.totalUsers} icon="👥" color="text-blue-400" />
-        <StatCard title="Người dùng hoạt động" value={stats.activeUsers} icon="✅" color="text-green-400" />
+        <StatCard title="Total Users" value={stats.totalUsers} icon="👥" color="var(--accent)" />
+        <StatCard
+          title="Active Users"
+          value={stats.activeUsers}
+          icon="✅"
+          color="var(--admin-success)"
+        />
         <StatCard
           title="Tổng danh mục"
           value={stats.totalCategories}
           icon="📁"
-          color="text-purple-400"
+          color="var(--accent)"
         />
       </div>
 
       {/* Quick Actions Section */}
       <div>
-        <h2 className="text-2xl font-bold text-white mb-4">Thao tác nhanh</h2>
+        <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--admin-text)' }}>
+          Quick Actions
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <QuickActionButton
             label="Quản lý người dùng"

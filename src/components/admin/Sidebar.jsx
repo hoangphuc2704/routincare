@@ -28,8 +28,10 @@ export default function Sidebar() {
   return (
     <div className={styles.sidebar}>
       {/* Logo / Title */}
-      <div className="p-6 border-b border-white/10">
-        <h1 className="text-2xl font-bold text-white">Trang quản trị</h1>
+      <div className="p-6" style={{ borderBottom: '1px solid var(--admin-border)' }}>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--admin-text)' }}>
+          Admin Panel
+        </h1>
       </div>
 
       {/* Navigation Links */}
@@ -39,11 +41,30 @@ export default function Sidebar() {
             <li key={item.path}>
               <Link
                 to={item.path}
-                className={`block px-4 py-3 rounded-lg transition-colors duration-200 ${
+                className={`block px-4 py-3 rounded-lg transition-colors duration-200`}
+                style={
                   isActive(item.path)
-                    ? 'bg-purple-600 text-white font-semibold'
-                    : 'text-gray-400 hover:text-white hover:bg-neutral-800'
-                }`}
+                    ? {
+                        backgroundColor: 'var(--accent)',
+                        color: 'var(--admin-text)',
+                        fontWeight: '600',
+                      }
+                    : {
+                        color: 'var(--admin-text-secondary)',
+                      }
+                }
+                onMouseEnter={(e) => {
+                  if (!isActive(item.path)) {
+                    e.target.style.color = 'var(--admin-text)';
+                    e.target.style.backgroundColor = 'var(--admin-border)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive(item.path)) {
+                    e.target.style.color = 'var(--admin-text-secondary)';
+                    e.target.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
                 {item.label}
               </Link>
@@ -53,10 +74,16 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout Button */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4" style={{ borderTop: '1px solid var(--admin-border)' }}>
         <button
           onClick={handleLogout}
-          className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
+          className="w-full px-4 py-2 rounded-lg transition-colors duration-200"
+          style={{
+            backgroundColor: 'var(--admin-error)',
+            color: 'white',
+          }}
+          onMouseEnter={(e) => (e.target.style.opacity = '0.8')}
+          onMouseLeave={(e) => (e.target.style.opacity = '1')}
         >
           Đăng xuất
         </button>

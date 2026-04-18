@@ -14,6 +14,19 @@
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
+  /* Admin colors */
+  --admin-bg: #08060d;
+  --admin-sidebar: #1a1a1a;
+  --admin-header: #1a1a1a;
+  --admin-card: #1a1a1a;
+  --admin-border: rgba(255, 255, 255, 0.1);
+  --admin-text: #f3f4f6;
+  --admin-text-secondary: #9ca3af;
+  --admin-success: #10b981;
+  --admin-success-bg: rgba(16, 185, 129, 0.1);
+  --admin-error: #ef4444;
+  --admin-error-bg: rgba(239, 68, 68, 0.1);
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -124,7 +137,12 @@ code {
 
 .routine-preview-modal-root .ant-modal-content,
 .routine-preview-content {
-  background: radial-gradient(circle at 12% 10%, rgba(38, 51, 40, 0.96) 0%, rgba(10, 10, 10, 0.98) 48%, rgba(0, 0, 0, 0.99) 100%);
+  background: radial-gradient(
+    circle at 12% 10%,
+    rgba(38, 51, 40, 0.96) 0%,
+    rgba(10, 10, 10, 0.98) 48%,
+    rgba(0, 0, 0, 0.99) 100%
+  );
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   color: #fff;

@@ -12,7 +12,11 @@ const toNumber = (value, fallback = 0) => {
 
 const formatCurrency = (value) => {
   const amount = toNumber(value, 0);
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(amount);
 };
 
 export default function PlanDetailPage() {
@@ -61,7 +65,8 @@ export default function PlanDetailPage() {
       try {
         const fallbackRes = await subscriptionApi.checkout(planId);
         const fallbackPayload = fallbackRes.data?.data || fallbackRes.data || {};
-        const checkoutUrl = fallbackPayload.checkoutUrl || fallbackPayload.paymentUrl || fallbackPayload.payment_url;
+        const checkoutUrl =
+          fallbackPayload.checkoutUrl || fallbackPayload.paymentUrl || fallbackPayload.payment_url;
         const orderCode = fallbackPayload.orderCode;
         if (!checkoutUrl) throw new Error('Fallback checkout URL not returned');
 
@@ -99,7 +104,9 @@ export default function PlanDetailPage() {
               <ArrowLeft size={20} />
             </Link>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black">Premium</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black">
+                Premium
+              </p>
               <h1 className="text-xl md:text-2xl font-bold">Plan Detail</h1>
             </div>
           </div>
@@ -129,7 +136,9 @@ export default function PlanDetailPage() {
                   <Crown size={18} className="text-lime-300" />
                   {plan.name || 'Premium Plan'}
                 </h2>
-                <p className="text-sm text-zinc-300">{plan.description || 'Gói nâng cấp premium dành cho bạn.'}</p>
+                <p className="text-sm text-zinc-300">
+                  {plan.description || 'Gói nâng cấp premium dành cho bạn.'}
+                </p>
               </div>
               <span className="px-2 py-1 rounded-full text-[11px] border border-lime-400/30 text-lime-300 bg-lime-500/10">
                 {toNumber(plan.durationDays, 0)} ngày
@@ -143,7 +152,9 @@ export default function PlanDetailPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-zinc-200">
               {features.map((item, idx) => (
-                <div key={idx} className="p-2 rounded-lg bg-black/30 border border-white/10">{item}</div>
+                <div key={idx} className="p-2 rounded-lg bg-black/30 border border-white/10">
+                  {item}
+                </div>
               ))}
             </div>
 
