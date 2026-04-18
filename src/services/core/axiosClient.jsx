@@ -6,8 +6,8 @@ import {
   clearAllAuth,
 } from '../../utils/tokenService';
 
-// Dev (localhost:5173) luôn dùng relative path để đi qua Vite proxy, tránh CORS
-const isDev = import.meta.env.DEV && window.location.host.includes('localhost:5173');
+// Dev (localhost:5174) luôn dùng relative path để đi qua Vite proxy, tránh CORS
+const isDev = import.meta.env.DEV && window.location.host.includes('localhost:5174');
 const rawBaseURL = isDev ? '' : import.meta.env.VITE_API_BASE_URL || '';
 const baseURL = rawBaseURL.endsWith('/') ? rawBaseURL.slice(0, -1) : rawBaseURL;
 
