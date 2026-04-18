@@ -18,9 +18,9 @@
   /* Reset any global text-align that affects layout */
   text-align: left !important;
 
-  /* Dark admin theme */
-  background-color: #000 !important;
-  color: #fff !important;
+  /* Dark admin theme using CSS variables */
+  background-color: var(--admin-bg) !important;
+  color: var(--admin-text) !important;
   overflow: hidden !important;
 
   /* Override Tailwind & global defaults */
@@ -50,8 +50,8 @@
 .sidebar {
   width: 16rem !important; /* 240px */
   height: 100% !important;
-  background-color: #171717 !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background-color: var(--admin-sidebar) !important;
+  border-right: 1px solid var(--admin-border) !important;
   flex-shrink: 0 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -64,7 +64,7 @@
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  background-color: #000 !important;
+  background-color: var(--admin-bg) !important;
   width: 100% !important;
   text-align: left !important;
 }
@@ -72,8 +72,8 @@
 /* Header */
 .header {
   height: auto !important;
-  background-color: #171717 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background-color: var(--admin-header) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
   padding: 1rem 1.5rem !important;
   flex-shrink: 0 !important;
   display: flex !important;
@@ -89,7 +89,7 @@
   overflow-y: auto !important;
   overflow-x: hidden !important;
   padding: 1.5rem !important;
-  background-color: #000 !important;
+  background-color: var(--admin-bg) !important;
   width: 100% !important;
   text-align: left !important;
 }
@@ -104,12 +104,13 @@
 }
 
 .content::-webkit-scrollbar-thumb {
-  background: #404040;
+  background: var(--accent);
   border-radius: 4px;
+  opacity: 0.5;
 }
 
 .content::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  opacity: 0.8;
 }
 
 /* Force desktop layout - no responsive shrinking */

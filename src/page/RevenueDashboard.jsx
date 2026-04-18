@@ -212,32 +212,45 @@ const RevenueDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--admin-bg)' }}>
       {/* Header */}
       <div className="mb-8 animate-fade-in">
-        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+        <h1
+          className="text-3xl sm:text-4xl font-bold mb-2 flex items-center gap-3"
+          style={{ color: 'var(--admin-text)' }}
+        >
           <span className="text-4xl">💹</span>
           Revenue Dashboard
         </h1>
-        <p className="text-gray-400 text-sm sm:text-base">
+        <p className="text-sm sm:text-base" style={{ color: 'var(--admin-text-secondary)' }}>
           Track your platform's financial performance in real-time
         </p>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="mb-6 bg-red-900/20 border border-red-700/50 rounded-lg p-4 animate-pulse">
+        <div
+          className="mb-6 border rounded-lg p-4 animate-pulse"
+          style={{ backgroundColor: 'var(--admin-error-bg)', borderColor: 'var(--admin-error)' }}
+        >
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
-                <h3 className="text-red-400 font-semibold">Error Loading Data</h3>
-                <p className="text-red-300 text-sm mt-1">{error}</p>
+                <h3 className="font-semibold" style={{ color: 'var(--admin-error)' }}>
+                  Error Loading Data
+                </h3>
+                <p className="text-sm mt-1" style={{ color: 'var(--admin-error)' }}>
+                  {error}
+                </p>
               </div>
             </div>
             <button
               onClick={handleRetry}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors duration-200"
+              style={{ backgroundColor: 'var(--admin-error)' }}
+              onMouseEnter={(e) => (e.target.style.opacity = '0.8')}
+              onMouseLeave={(e) => (e.target.style.opacity = '1')}
             >
               Retry
             </button>
@@ -261,7 +274,11 @@ const RevenueDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Revenue Trend Line Chart */}
         <div className="lg:col-span-2">
-          <RevenueLineChart data={revenueByMonth} loading={loadingStates.monthly} />
+          <RevenueLineChart
+            data={revenueByMonth}
+            summaryData={summaryData}
+            loading={loadingStates.monthly}
+          />
         </div>
 
         {/* Revenue by Plan Bar Chart */}
@@ -270,25 +287,29 @@ const RevenueDashboard = () => {
         </div>
 
         {/* Top Plans Donut Chart */}
-        <div>
+        {/* <div>
           <TopPlansDonutChart data={topPlans} loading={loadingStates.topPlans} />
-        </div>
+        </div> */}
       </div>
 
       {/* Footer Statistics */}
       {!loading && (
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700/50 text-center text-gray-400 text-sm">
+        <div
+          className="rounded-xl p-6 text-center text-sm"
+          style={{
+            backgroundColor: 'var(--admin-card)',
+            borderColor: 'var(--admin-border)',
+            border: '1px solid',
+            color: 'var(--admin-text-secondary)',
+          }}
+        >
           <p>
             📊 Showing data for:{' '}
-            <span className="text-blue-400 font-semibold">
-              {dateRange === '7days'
-                ? 'Last 7 Days'
-                : dateRange === '30days'
-                  ? 'Last 30 Days'
-                  : '1 Year'}
+            <span className="font-semibold" style={{ color: 'var(--accent)' }}>
+              {dateRange === '30days' ? 'Last 30 Days' : '1 Year'}
             </span>
           </p>
-          <p className="mt-2 text-xs text-gray-500">Last updated: {new Date().toLocaleString()}</p>
+          <p className="mt-2 text-xs">Last updated: {new Date().toLocaleString()}</p>
         </div>
       )}
 

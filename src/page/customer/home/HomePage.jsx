@@ -41,7 +41,7 @@ export default function Homepage() {
     setError('');
 
     const [postsResult, exploreRoutineResult, exploreUserResult] = await Promise.allSettled([
-      postApi.getPosts({ page: 1, pageSize: 10 }),
+      postApi.getPosts({ page: 1, pageSize: 20 }),
       feedApi.getExploreRoutines({ page: 1, pageSize: 8 }),
       feedApi.getExploreUsers({ page: 1, pageSize: 8 }),
     ]);
@@ -53,18 +53,26 @@ export default function Homepage() {
     let nextUsers = [];
 
     if (postsResult.status === 'fulfilled') {
-      nextFeed = unwrapItems(postsResult.value).map((item, index) =>
-        normalizePostItem(item, index, { canInteract: true })
-      );
+      nextFeed = unwrapItems(postsResult.value)
+        .map((item, index) => normalizePostItem(item, index, { canInteract: true }))
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateB - dateA;
+        });
     } else {
       failures.push(postsResult.reason);
       console.warn('Posts endpoint failed, try fallback feed:', postsResult.reason);
 
       try {
-        const feedFallbackRes = await feedApi.getFeed({ page: 1, pageSize: 10 });
-        nextFeed = unwrapItems(feedFallbackRes).map((item, index) =>
-          normalizePostItem(item, index, { canInteract: true })
-        );
+        const feedFallbackRes = await feedApi.getFeed({ page: 1, pageSize: 20 });
+        nextFeed = unwrapItems(feedFallbackRes)
+          .map((item, index) => normalizePostItem(item, index, { canInteract: true }))
+          .sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA;
+          });
       } catch (fallbackErr) {
         failures.push(fallbackErr);
         console.warn('Fallback /feed endpoint failed:', fallbackErr);
@@ -72,7 +80,13 @@ export default function Homepage() {
     }
 
     if (exploreRoutineResult.status === 'fulfilled') {
-      nextRoutines = unwrapItems(exploreRoutineResult.value).map(normalizeExploreRoutine);
+      nextRoutines = unwrapItems(exploreRoutineResult.value)
+        .map(normalizeExploreRoutine)
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateB - dateA;
+        });
     } else {
       failures.push(exploreRoutineResult.reason);
       console.warn('Explore routines endpoint failed:', exploreRoutineResult.reason);
@@ -90,7 +104,11 @@ export default function Homepage() {
         const exploreFallbackRes = await feedApi.getExplore({ page: 1, pageSize: 12 });
         const mixedItems = unwrapItems(exploreFallbackRes);
         const split = splitExploreItems(mixedItems);
-        nextRoutines = split.routines;
+        nextRoutines = split.routines.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateB - dateA;
+        });
         nextUsers = split.users;
       } catch (fallbackErr) {
         failures.push(fallbackErr);
@@ -123,32 +141,35 @@ export default function Homepage() {
     [exploreRoutines.length, exploreUsers.length]
   );
 
-  const handleOpenCopyPreview = useCallback(async (target) => {
-    const postId = target?.id;
-    const routineId = target?.routineId;
+  const handleOpenCopyPreview = useCallback(
+    async (target) => {
+      const postId = target?.id;
+      const routineId = target?.routineId;
 
-    if (!postId || !routineId) {
-      message.info('Post nay chua co routine de copy.');
-      return;
-    }
+      if (!postId || !routineId) {
+        message.info('Post nay chua co routine de copy.');
+        return;
+      }
 
-    if (copyLoadingByPost[postId]) return;
+      if (copyLoadingByPost[postId]) return;
 
-    setSelectedCopyTarget(target);
-    setPreviewRoutine(null);
-    setPreviewOpen(true);
-    setPreviewLoading(true);
+      setSelectedCopyTarget(target);
+      setPreviewRoutine(null);
+      setPreviewOpen(true);
+      setPreviewLoading(true);
 
-    try {
-      const detailRes = await routineApi.getById(routineId);
-      setPreviewRoutine(normalizeRoutinePreview(detailRes, target));
-    } catch (err) {
-      setPreviewRoutine(normalizeRoutinePreview(null, target));
-      message.error(err?.response?.data?.message || 'Khong the tai chi tiet routine luc nay.');
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, [copyLoadingByPost]);
+      try {
+        const detailRes = await routineApi.getById(routineId);
+        setPreviewRoutine(normalizeRoutinePreview(detailRes, target));
+      } catch (err) {
+        setPreviewRoutine(normalizeRoutinePreview(null, target));
+        message.error(err?.response?.data?.message || 'Khong the tai chi tiet routine luc nay.');
+      } finally {
+        setPreviewLoading(false);
+      }
+    },
+    [copyLoadingByPost]
+  );
 
   const handleClosePreview = useCallback(() => {
     if (previewSubmitting) return;
@@ -191,22 +212,22 @@ export default function Homepage() {
               activeTab === TAB.FEED ? 'text-white' : 'text-white/55 hover:text-white/85'
             }`}
           >
-            Theo dõi
+            Khám phá
             {activeTab === TAB.FEED && (
               <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#d2fb05] rounded-full" />
             )}
           </button>
-          <button
+          {/* <button
             onClick={() => setActiveTab(TAB.EXPLORE)}
             className={`relative py-2.5 text-sm font-semibold transition-colors ${
               activeTab === TAB.EXPLORE ? 'text-white' : 'text-white/55 hover:text-white/85'
             }`}
           >
-            Khám phá
+            Theo dõi
             {activeTab === TAB.EXPLORE && (
               <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#d2fb05] rounded-full" />
             )}
-          </button>
+          </button> */}
         </div>
 
         {loading ? (
@@ -257,12 +278,18 @@ export default function Homepage() {
                     className="rounded-3xl border border-white/10 bg-neutral-950/70 overflow-hidden"
                   >
                     {routine.image ? (
-                      <img src={routine.image} alt={routine.title} className="h-36 w-full object-cover" />
+                      <img
+                        src={routine.image}
+                        alt={routine.title}
+                        className="h-36 w-full object-cover"
+                      />
                     ) : (
                       <div className="h-36 w-full bg-[linear-gradient(135deg,#d2fb05_0%,#6c8b05_100%)]" />
                     )}
                     <div className="p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-[#d2fb05]">{routine.category}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-[#d2fb05]">
+                        {routine.category}
+                      </p>
                       <h3 className="text-base font-bold mt-1 line-clamp-1">{routine.title}</h3>
                       <p className="text-sm text-white/65 mt-1 line-clamp-2">
                         {routine.description || 'Routine công khai đang thu hút nhiều người dùng.'}
@@ -282,7 +309,9 @@ export default function Homepage() {
                           disabled={Boolean(copyLoadingByPost[`explore-${routine.id}`])}
                           className="inline-flex items-center rounded-full border border-[#d2fb05]/40 px-3 py-1.5 text-xs font-semibold text-[#d2fb05] hover:bg-[#d2fb05]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                          {copyLoadingByPost[`explore-${routine.id}`] ? 'Dang copy...' : 'Copy routine'}
+                          {copyLoadingByPost[`explore-${routine.id}`]
+                            ? 'Dang copy...'
+                            : 'Copy routine'}
                         </button>
                       </div>
                     </div>

@@ -7,7 +7,7 @@ const DateRangeFilter = ({ onRangeChange = () => {}, defaultRange = '30days' }) 
   const [selectedRange, setSelectedRange] = useState(defaultRange);
 
   const ranges = [
-    { value: '7days', label: 'Last 7 Days', icon: '📅' },
+    // { value: '7days', label: 'Last 7 Days', icon: '📅' },
     { value: '30days', label: 'Last 30 Days', icon: '📊' },
     { value: '1year', label: '1 Year', icon: '📈' },
   ];

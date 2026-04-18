@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BadgeCheck, Crown, ExternalLink, History, Loader2, Wallet, XCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Crown,
+  ExternalLink,
+  History,
+  Loader2,
+  Wallet,
+  XCircle,
+} from 'lucide-react';
 import { message, Modal } from 'antd';
 import BottomNav from '../../../components/BottomNav';
 import subscriptionApi from '../../../api/subscriptionApi';
@@ -129,7 +138,8 @@ export default function SubscriptionPage() {
   let autoRenewText = '—';
   if (autoRenew === true) autoRenewText = 'true';
   if (autoRenew === false) autoRenewText = 'false';
-  const canCancelSubscription = (activeStatus === 'Active' || activeStatus === 'Pending') && autoRenew === true;
+  const canCancelSubscription =
+    (activeStatus === 'Active' || activeStatus === 'Pending') && autoRenew === true;
   let cancelButtonText = 'Đã tắt gia hạn';
   if (canCancelSubscription) cancelButtonText = 'Hủy gói hiện tại';
   if (cancelLoading) cancelButtonText = 'Đang hủy...';
@@ -154,7 +164,8 @@ export default function SubscriptionPage() {
       const orderCodeFromQuery = searchParams.get('orderCode');
       const pendingOrderCode = localStorage.getItem('pendingOrderCode');
       const orderCode = orderCodeFromQuery || pendingOrderCode || '';
-      const isSuccessPath = location.pathname === '/payment/success' || location.pathname === '/payments/return';
+      const isSuccessPath =
+        location.pathname === '/payment/success' || location.pathname === '/payments/return';
       const isCancelPath = location.pathname === '/payment/cancel';
 
       if (cancel === 'true' || isCancelPath) {
@@ -185,7 +196,9 @@ export default function SubscriptionPage() {
         const success = Boolean(result?.success ?? true);
 
         if (!success) {
-          throw new Error(result?.error?.message || result?.message || 'Xác minh thanh toán thất bại');
+          throw new Error(
+            result?.error?.message || result?.message || 'Xác minh thanh toán thất bại'
+          );
         }
 
         const currentUser = getUser() || {};
@@ -199,7 +212,12 @@ export default function SubscriptionPage() {
         message.success('Thanh toán thành công, Premium đã được kích hoạt');
       } catch (err) {
         console.error('Failed to verify payment return:', err);
-        message.error(err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Xác minh thanh toán thất bại, đang thử đồng bộ từ webhook');
+        message.error(
+          err.response?.data?.error?.message ||
+            err.response?.data?.message ||
+            err.message ||
+            'Xác minh thanh toán thất bại, đang thử đồng bộ từ webhook'
+        );
         startPollingStatus();
       } finally {
         if (!cancelled) {
@@ -218,8 +236,12 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const hasReturnFlag = searchParams.has('orderCode') || searchParams.has('paymentStatus') || searchParams.has('payos');
-    const isSuccessPath = location.pathname === '/payment/success' || location.pathname === '/payments/return';
+    const hasReturnFlag =
+      searchParams.has('orderCode') ||
+      searchParams.has('paymentStatus') ||
+      searchParams.has('payos');
+    const isSuccessPath =
+      location.pathname === '/payment/success' || location.pathname === '/payments/return';
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && activeStatus !== 'Active') {
@@ -292,7 +314,8 @@ export default function SubscriptionPage() {
       try {
         const fallbackRes = await subscriptionApi.checkout(planId);
         const fallbackPayload = fallbackRes.data?.data || fallbackRes.data || {};
-        const checkoutUrl = fallbackPayload.checkoutUrl || fallbackPayload.paymentUrl || fallbackPayload.payment_url;
+        const checkoutUrl =
+          fallbackPayload.checkoutUrl || fallbackPayload.paymentUrl || fallbackPayload.payment_url;
         const orderCode = fallbackPayload.orderCode;
 
         if (!checkoutUrl) throw new Error('Fallback checkout URL not returned');
@@ -323,7 +346,11 @@ export default function SubscriptionPage() {
     }
 
     if (!canCancelSubscription) {
-      message.info(autoRenew === false ? 'Đã tắt gia hạn cho gói hiện tại' : 'Trạng thái hiện tại không thể hủy');
+      message.info(
+        autoRenew === false
+          ? 'Đã tắt gia hạn cho gói hiện tại'
+          : 'Trạng thái hiện tại không thể hủy'
+      );
       return;
     }
 
@@ -370,7 +397,9 @@ export default function SubscriptionPage() {
               <ArrowLeft size={20} />
             </Link>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black">Premium</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black">
+                Premium
+              </p>
               <h1 className="text-xl md:text-2xl font-bold">Subscriptions</h1>
             </div>
           </div>
@@ -399,10 +428,18 @@ export default function SubscriptionPage() {
             </span>
           </div>
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-zinc-300">
-            <div className="p-2 rounded-lg bg-black/30 border border-white/10">Upload evidence ảnh/video</div>
-            <div className="p-2 rounded-lg bg-black/30 border border-white/10">AI routine suggestions</div>
-            <div className="p-2 rounded-lg bg-black/30 border border-white/10">Detailed analytics & streak</div>
-            <div className="p-2 rounded-lg bg-black/30 border border-white/10">Unlimited public routines</div>
+            <div className="p-2 rounded-lg bg-black/30 border border-white/10">
+              Upload evidence ảnh/video
+            </div>
+            <div className="p-2 rounded-lg bg-black/30 border border-white/10">
+              AI routine suggestions
+            </div>
+            <div className="p-2 rounded-lg bg-black/30 border border-white/10">
+              Detailed analytics & streak
+            </div>
+            <div className="p-2 rounded-lg bg-black/30 border border-white/10">
+              Unlimited public routines
+            </div>
           </div>
         </section>
 
@@ -428,19 +465,35 @@ export default function SubscriptionPage() {
                 </span>
               </div>
               <div className="text-xs text-zinc-300 grid grid-cols-1 md:grid-cols-3 gap-2">
-                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Giá: {formatCurrency(currentSubscription.price)}</p>
-                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Bắt đầu: {formatDateTime(currentSubscription.startDate || currentSubscription.startedAt)}</p>
-                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Kết thúc: {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}</p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">
+                  Giá: {formatCurrency(currentSubscription.price)}
+                </p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">
+                  Bắt đầu:{' '}
+                  {formatDateTime(currentSubscription.startDate || currentSubscription.startedAt)}
+                </p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">
+                  Kết thúc:{' '}
+                  {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}
+                </p>
               </div>
               <div className="text-xs text-zinc-300 grid grid-cols-1 md:grid-cols-3 gap-2">
-                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">Status: {activeStatus}</p>
-                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">EndDate: {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}</p>
-                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">AutoRenew: {autoRenewText}</p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">
+                  Status: {activeStatus}
+                </p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">
+                  EndDate:{' '}
+                  {formatDateTime(currentSubscription.endDate || currentSubscription.expiresAt)}
+                </p>
+                <p className="rounded-lg bg-white/5 px-3 py-2 border border-white/10">
+                  AutoRenew: {autoRenewText}
+                </p>
               </div>
 
               {activeStatus === 'Active' && autoRenew === false && (
                 <p className="mt-2 text-xs rounded-lg border border-amber-400/40 bg-amber-500/10 text-amber-200 px-3 py-2">
-                  Gia hạn đã tắt - còn hiệu lực đến {formatDate(currentSubscription.endDate || currentSubscription.expiresAt)}.
+                  Gia hạn đã tắt - còn hiệu lực đến{' '}
+                  {formatDate(currentSubscription.endDate || currentSubscription.expiresAt)}.
                 </p>
               )}
 
@@ -463,7 +516,9 @@ export default function SubscriptionPage() {
 
               {activeStatus === 'Active' && (
                 <p className="text-xs text-zinc-400 mt-1">
-                  Bạn đang dùng Premium đến {formatDate(currentSubscription.endDate || currentSubscription.expiresAt)}. Hủy sẽ chỉ tắt tự động gia hạn.
+                  Bạn đang dùng Premium đến{' '}
+                  {formatDate(currentSubscription.endDate || currentSubscription.expiresAt)}. Hủy sẽ
+                  chỉ tắt tự động gia hạn.
                 </p>
               )}
             </div>
@@ -494,21 +549,33 @@ export default function SubscriptionPage() {
               {sortedPlans.map((plan) => {
                 const planId = plan.id || plan.planId;
                 const isLoading = checkoutLoadingId === planId;
-                const isCurrentActivePlan = hasActiveSubscription && String(planId || '') === currentPlanId;
+                const isCurrentActivePlan =
+                  hasActiveSubscription && String(planId || '') === currentPlanId;
                 const checkoutDisabled = isLoading || isCurrentActivePlan;
                 let checkoutButtonLabel = 'Thanh toán ngay';
                 if (isCurrentActivePlan) checkoutButtonLabel = 'Đang sử dụng';
                 return (
-                  <div key={planId} className="rounded-2xl p-[1px] bg-gradient-to-b from-lime-400/40 to-white/10 shadow-[0_10px_60px_-50px_rgba(190,242,100,0.6)]">
+                  <div
+                    key={planId}
+                    className="rounded-2xl p-[1px] bg-gradient-to-b from-lime-400/40 to-white/10 shadow-[0_10px_60px_-50px_rgba(190,242,100,0.6)]"
+                  >
                     <div className="h-full rounded-2xl bg-[#0f0f0f] p-4 flex flex-col gap-3 border border-white/5">
                       <div>
-                        <h4 className="text-base font-bold text-white">{plan.name || 'Premium Plan'}</h4>
-                        <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{plan.description || 'Gói nâng cấp premium dành cho bạn.'}</p>
+                        <h4 className="text-base font-bold text-white">
+                          {plan.name || 'Premium Plan'}
+                        </h4>
+                        <p className="text-xs text-zinc-500 mt-1 line-clamp-2">
+                          {plan.description || 'Gói nâng cấp premium dành cho bạn.'}
+                        </p>
                       </div>
 
                       <div className="space-y-1">
-                        <p className="text-2xl font-black text-lime-300">{formatCurrency(plan.price)}</p>
-                        <p className="text-xs text-zinc-400">{toNumber(plan.durationDays, 0)} ngày</p>
+                        <p className="text-2xl font-black text-lime-300">
+                          {formatCurrency(plan.price)}
+                        </p>
+                        <p className="text-xs text-zinc-400">
+                          {toNumber(plan.durationDays, 0)} ngày
+                        </p>
                       </div>
 
                       <div className="flex gap-2 mt-auto">
@@ -620,15 +687,26 @@ export default function SubscriptionPage() {
                   {filteredPayments.map((item) => {
                     const status = getStatusLabel(item.status);
                     return (
-                      <tr key={item.id || item.paymentId || item.orderCode} className="border-b border-white/5 text-zinc-300 hover:bg-white/5 transition-colors">
-                        <td className="py-2 pr-3">{item.orderCode || item.id || item.paymentId || '—'}</td>
+                      <tr
+                        key={item.id || item.paymentId || item.orderCode}
+                        className="border-b border-white/5 text-zinc-300 hover:bg-white/5 transition-colors"
+                      >
+                        <td className="py-2 pr-3">
+                          {item.orderCode || item.id || item.paymentId || '—'}
+                        </td>
                         <td className="py-2 pr-3">{formatCurrency(item.amount)}</td>
                         <td className="py-2 pr-3">
-                          <span className={`text-[11px] px-2 py-1 rounded-full border ${STATUS_STYLES[status] || 'bg-white/10 text-zinc-300 border-white/20'}`}>
+                          <span
+                            className={`text-[11px] px-2 py-1 rounded-full border ${STATUS_STYLES[status] || 'bg-white/10 text-zinc-300 border-white/20'}`}
+                          >
                             {status}
                           </span>
                         </td>
-                        <td className="py-2 pr-3">{formatDateTime(item.createdAt || item.paidAt || item.transactionDateTime)}</td>
+                        <td className="py-2 pr-3">
+                          {formatDateTime(
+                            item.createdAt || item.paidAt || item.transactionDateTime
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
